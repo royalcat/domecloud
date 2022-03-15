@@ -6,8 +6,10 @@ class VideoInfo {
   final DateTime modificationTime;
   final Duration duration;
   final Resolution resolution;
+  final List<String> previewUrls;
 
-  VideoInfo(this.path, this.size, this.modificationTime, this.duration, this.resolution);
+  VideoInfo(this.path, this.size, this.modificationTime, this.duration, this.resolution,
+      this.previewUrls);
 
   Map<String, dynamic> toMap() {
     return {
@@ -16,6 +18,7 @@ class VideoInfo {
       'modTime': modificationTime.millisecondsSinceEpoch,
       'duration': duration.inMicroseconds * 1000,
       'resolution': resolution.toMap(),
+      'previewUrls': previewUrls,
     };
   }
 
@@ -26,6 +29,7 @@ class VideoInfo {
       DateTime.fromMillisecondsSinceEpoch(map['modTime']),
       Duration(microseconds: ((map['duration'] / 1000) as double).floor()),
       Resolution.fromMap(map['resolution']),
+      map['previewUrls'],
     );
   }
 
