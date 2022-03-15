@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:dmch_gui/widgets/file/theme.dart';
 import 'package:file/file.dart';
 import 'package:flutter/material.dart';

@@ -1,37 +1,31 @@
-import 'package:dmch_gui/widgets/file/theme.dart';
+import 'package:dmch_gui/scroll.dart';
 import 'package:file/file.dart';
 import 'package:flutter/material.dart';
 
+import 'package:dmch_gui/widgets/file/theme.dart';
+
 import 'entity.dart';
 
-class FSGrid extends StatefulWidget {
-  final FileSystem fs;
+class FileGrid extends StatelessWidget {
+  final Iterable<FileSystemEntity> entites;
+  final scrollCtrl = ScrollController();
 
-  const FSGrid({Key? key, required this.fs}) : super(key: key);
-
-  @override
-  State<FSGrid> createState() => _FSGridState();
-}
-
-class _FSGridState extends State<FSGrid> {
-  Iterable<FileSystemEntity> entites = <FileSystemEntity>[];
-
-  @override
-  void initState() {
-    super.initState();
-
-    widget.fs.directory("/home/royalcat/").list().toList().then((list) => setState(() {
-          entites = list.where((element) => !element.basename.startsWith("."));
-        }));
-  }
+  FileGrid({
+    Key? key,
+    required this.entites,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return FSGridTheme(
       theme: FSGridThemeData.normal(),
-      child: GridView.extent(
-        maxCrossAxisExtent: 200,
-        children: entites.map((e) => FSEntityItem(entity: e)).toList(),
+      child: SmoothScroll(
+        controller: scrollCtrl,
+        child: GridView.extent(
+          maxCrossAxisExtent: 200,
+          controller: scrollCtrl,
+          children: entites.map((e) => FSEntityItem(entity: e)).toList(),
+        ),
       ),
     );
   }
