@@ -21,12 +21,19 @@ type Resolution struct {
 
 type VideoInfo struct {
 	Path       string        `json:"name"`
+	Size       int64         `json:"size"`
+	ModTime    time.Time     `json:"modTime"`
 	Duration   time.Duration `json:"duration"`
 	Resolution Resolution    `json:"resolution"`
 }
 
-func GenerateVideoInfo(ctx context.Context, path string) (*VideoInfo, error) {
-	fullpath := cfs.Cfs.RealPath(path)
+func GenerateVideoInfo(ctx context.Context, fpath string) (*VideoInfo, error) {
+	stat, err := cfs.Cfs.Stat(fpath)
+	if err != nil {
+		return nil, err
+	}
+
+	fullpath := cfs.Cfs.RealPath(fpath)
 	probe, err := ffprobe.ProbeURL(ctx, fullpath)
 	if err != nil {
 		return nil, err
@@ -47,7 +54,9 @@ func GenerateVideoInfo(ctx context.Context, path string) (*VideoInfo, error) {
 	}
 
 	info := &VideoInfo{
-		Path: path,
+		Path:    fpath,
+		Size:    stat.Size(),
+		ModTime: stat.ModTime(),
 		Resolution: Resolution{
 			Width:  videoStream.Width,
 			Height: videoStream.Height,

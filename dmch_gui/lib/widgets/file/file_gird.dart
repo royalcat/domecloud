@@ -1,6 +1,5 @@
 import 'package:dmch_gui/widgets/file/theme.dart';
 import 'package:file/file.dart';
-import 'package:file/local.dart';
 import 'package:flutter/material.dart';
 
 import 'entity.dart';

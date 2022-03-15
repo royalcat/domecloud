@@ -6,7 +6,7 @@ import (
 	"path"
 )
 
-var Cfs DmFS = DmFS{RootPath: config.Config.RootFolder}
+var Cfs *DmFS = &DmFS{RootPath: config.Config.RootFolder}
 
 type DmFS struct {
 	RootPath string
