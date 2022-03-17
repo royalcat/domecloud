@@ -1,7 +1,8 @@
 package main
 
 import (
-	"dmch-server/config"
+	"dmch-server/src/config"
+	"dmch-server/src/delivery"
 	"log"
 	"os"
 
@@ -21,6 +22,6 @@ func filesystem() webdav.FileSystem {
 func main() {
 
 	config.Load()
-	router := routes.NewDmRouter()
+	router := delivery.NewDmServer()
 	router.Run()
 }

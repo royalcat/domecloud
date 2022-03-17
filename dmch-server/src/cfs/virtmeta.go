@@ -2,7 +2,8 @@ package cfs
 
 import (
 	"context"
-	"dmch-server/server/media"
+	"dmch-server/src/config"
+	"dmch-server/src/media"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -41,13 +42,13 @@ func (dmfs *DmFS) getPreviews(ctx context.Context, videoPath string, timestamps 
 	for i, timestamp := range timestamps {
 		filename := fmt.Sprintf("%d.webp", i)
 		output := path.Join(dmfs.getPreviewsRealPath(videoPath), filename)
-		if _, err := os.Stat(output); !os.IsNotExist(err) {
+		if _, err := os.Stat(output); os.IsNotExist(err) {
 			body, err := exec.Command(
 				"ffmpeg",
 				"-y",
 				"-ss", fmt.Sprintf("%f", timestamp.Seconds()),
 				"-i", fmt.Sprintf("%s", dmfs.RealPath(videoPath)),
-				//"-vf", fmt.Sprintf("\"scale=%d:-1\"", config.Config.Media.PreviewWidth),
+				"-vf", fmt.Sprintf("scale=%d:-1", config.Config.Media.PreviewWidth),
 				"-vframes", "1",
 				output,
 			).CombinedOutput()
@@ -80,7 +81,7 @@ func (dmfs *DmFS) getVideoInfo(ctx context.Context, fpath string) (*media.VideoI
 		}
 	}
 	if videoStream == nil {
-		return nil, media.ErrVideoStreamNotFound
+		return nil, ErrVideoStreamNotFound
 	}
 
 	duration, err := strconv.ParseFloat(videoStream.Duration, 10)

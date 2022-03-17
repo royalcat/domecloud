@@ -1,0 +1,3 @@
+package jsonfileserver
+
+func JsonFilesServer() {}

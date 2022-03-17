@@ -2,7 +2,8 @@ package cfs
 
 import (
 	"context"
-	"dmch-server/config"
+	"dmch-server/src/config"
+
 	"io/fs"
 	"os"
 	"path"
@@ -16,10 +17,10 @@ type DmFS struct {
 	cacheDir string
 }
 
-func NewDmFS(rootPath string, cacheDir string) *DmFS {
+func NewDmFS() *DmFS {
 	return &DmFS{
-		rootDir:  path.Clean(rootPath),
-		cacheDir: path.Clean(cacheDir),
+		rootDir:  path.Clean(config.Config.RootFolder),
+		cacheDir: path.Clean(config.Config.CacheFolder),
 	}
 }
 
