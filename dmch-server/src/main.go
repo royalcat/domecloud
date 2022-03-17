@@ -1,8 +1,8 @@
 package main
 
 import (
+	"dmch-server/config"
 	"log"
-	"net/http"
 	"os"
 
 	"golang.org/x/net/webdav"
@@ -20,12 +20,7 @@ func filesystem() webdav.FileSystem {
 
 func main() {
 
-	h := &webdav.Handler{
-		Prefix:     "",
-		FileSystem: filesystem(),
-		LockSystem: webdav.NewMemLS(),
-	}
-
-	http.HandleFunc("/", h.ServeHTTP)
-	log.Fatal(http.ListenAndServe(":8080", h))
+	config.Load()
+	router := routes.NewDmRouter()
+	router.Run()
 }
