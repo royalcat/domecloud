@@ -44,9 +44,18 @@ func (dmfs *DmFS) ReadDir(name string) ([]fs.DirEntry, error) {
 
 // Open implements fs.StatFS
 func (dmfs *DmFS) Open(name string) (fs.File, error) {
+
 	cmd := path.Base(name)
 	if cmd == "previews" || cmd == "info" { // TODO седелать мапу с разными функциями
 		fpath := path.Dir(name)
+		if stat, err := dmfs.Stat(fpath); err == nil && stat.IsDir() {
+			if stat, err = dmfs.Stat(name); err == nil { // return normal file if exists
+				return os.Open(dmfs.RealPath(name))
+			} else {
+				return nil, fs.ErrInvalid
+			}
+		}
+
 		if EndsWithOneOf(strings.ToLower(fpath), config.Config.Media.Extensions) { // BUG не брать тут из конфига
 			switch cmd {
 			case "previews":
@@ -63,6 +72,8 @@ func (dmfs *DmFS) Open(name string) (fs.File, error) {
 				infoPath := dmfs.getInfoRealPath(fpath)
 				return os.Open(infoPath)
 			}
+		} else {
+			return nil, fs.ErrInvalid
 		}
 	} else if path.Base(path.Dir(name)) == "previews" {
 		fpath := path.Dir(path.Dir(name))
@@ -77,7 +88,7 @@ func (dmfs *DmFS) Open(name string) (fs.File, error) {
 
 // Stat implements fs.StatFS
 func (dmfs *DmFS) Stat(name string) (fs.FileInfo, error) {
-	return os.Stat(name)
+	return os.Stat(dmfs.RealPath(name))
 }
 
 func (dmfs DmFS) RealPath(fpath string) string {

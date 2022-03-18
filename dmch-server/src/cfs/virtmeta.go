@@ -43,7 +43,8 @@ func (dmfs *DmFS) getPreviews(ctx context.Context, videoPath string, timestamps 
 		filename := fmt.Sprintf("%d.webp", i)
 		output := path.Join(dmfs.getPreviewsRealPath(videoPath), filename)
 		if _, err := os.Stat(output); os.IsNotExist(err) {
-			body, err := exec.Command(
+			body, err := exec.CommandContext(
+				ctx,
 				"ffmpeg",
 				"-y",
 				"-ss", fmt.Sprintf("%f", timestamp.Seconds()),
@@ -64,13 +65,12 @@ func (dmfs *DmFS) getPreviews(ctx context.Context, videoPath string, timestamps 
 }
 
 func (dmfs *DmFS) getVideoInfo(ctx context.Context, fpath string) (*media.VideoInfo, error) {
-	stat, err := dmfs.Stat(dmfs.RealPath(fpath))
+	stat, err := dmfs.Stat(fpath)
 	if err != nil {
 		return nil, err
 	}
 
-	fullpath := dmfs.RealPath(fpath)
-	probe, err := ffprobe.ProbeURL(ctx, fullpath)
+	probe, err := ffprobe.ProbeURL(ctx, dmfs.RealPath(fpath))
 	if err != nil {
 		return nil, err
 	}

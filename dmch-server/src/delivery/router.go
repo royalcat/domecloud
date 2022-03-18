@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"dmch-server/src/cfs"
+	"dmch-server/src/delivery/jsonfileserver"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -25,7 +26,7 @@ func (d *DmRouter) initRouter() {
 
 	router.Handler(
 		"GET", "/file/*path",
-		http.StripPrefix("/file/", http.FileServer(http.FS(cfs.NewDmFS()))),
+		http.StripPrefix("/file/", jsonfileserver.FileServer(http.FS(cfs.NewDmFS()))),
 	)
 
 	d.router = router
