@@ -1,4 +1,5 @@
 import 'package:dmch_gui/views/fs_view.dart';
+import 'package:dmch_gui/widgets/media/grid.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Flutter Demo'),
         ),
-        body: const FSView(),
+        body: const MediaGrid(),
       ),
     );
   }
