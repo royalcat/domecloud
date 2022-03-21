@@ -1,9 +1,11 @@
 import 'dart:convert';
 
 import 'package:dmch_gui/models/entry.dart';
+import 'package:dmch_gui/provider/dmapi.dart';
 import 'package:dmch_gui/widgets/media/video.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
 import '../../models/media.dart';
 
@@ -17,17 +19,23 @@ class MediaGrid extends StatefulWidget {
 }
 
 class _MediaGridState extends State<MediaGrid> {
+  String _path = "/";
   List<Entry> _entries = [];
+  List<VideoInfo> _infos = [];
+
+  Future<void> changePath([String? newPath]) async {
+    if (newPath != null) {
+      _path = newPath;
+    }
+    _entries = await Provider.of<DmApi>(context, listen: false).getEntries(_path);
+    setState(() {});
+  }
 
   @override
   void initState() {
     super.initState();
-    Future(() async {
-      final resp = await http.get(Uri.parse(baseUrl));
-      setState(() {
-        _entries = (json.decode(resp.body) as List<dynamic>).map((e) => Entry.fromMap(e)).toList();
-      });
-    });
+
+    Future(changePath);
   }
 
   @override

@@ -3,21 +3,17 @@ import 'dart:convert';
 
 import 'package:dmch_gui/models/entry.dart';
 import 'package:dmch_gui/widgets/media/grid.dart';
-import 'package:extended_image/extended_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:http/http.dart' as http;
-
-import '../../models/media.dart';
 
 class VideoInfoItem extends StatefulWidget {
   final String dirPath;
   final Entry entry;
 
-  const VideoInfoItem({Key? key, required this.entry, required this.dirPath}) : super(key: key);
+  const VideoInfoItem({Key? key, required this.dirPath, required this.entry}) : super(key: key);
 
   @override
   State<VideoInfoItem> createState() => _VideoInfoItemState();
@@ -105,7 +101,8 @@ class _VideoPreviewsState extends State<VideoPreviews> {
     return MouseRegion(
       onEnter: startRotate,
       onExit: stopRotate,
-      child: ExtendedImage.network(
+      child: Image.network(
+        // TODO сделать кастомный кеш
         widget.previewUrls[currentPreview],
         width: 100,
         height: 100,

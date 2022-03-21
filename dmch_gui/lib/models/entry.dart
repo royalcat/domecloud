@@ -1,22 +1,30 @@
 import 'dart:convert';
 
+enum MediaTypes { none, video, photo }
+
 class Entry {
   final String name;
   final bool isDir;
-
-  Entry(this.name, this.isDir);
+  final MediaTypes mediaType;
+  Entry({
+    required this.name,
+    required this.isDir,
+    required this.mediaType,
+  });
 
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'isDir': isDir,
+      'mediaType': mediaType.toString(),
     };
   }
 
   factory Entry.fromMap(Map<String, dynamic> map) {
     return Entry(
-      map['name'] ?? '',
-      map['isDir'] ?? false,
+      name: map['name'] ?? '',
+      isDir: map['isDir'] ?? false,
+      mediaType: MediaTypes.values.firstWhere((e) => e.toString() == map['mediaType']),
     );
   }
 
