@@ -21,13 +21,12 @@ class MediaGrid extends StatefulWidget {
 class _MediaGridState extends State<MediaGrid> {
   String _path = "/";
   List<Entry> _entries = [];
-  List<VideoInfo> _infos = [];
 
   Future<void> changePath([String? newPath]) async {
     if (newPath != null) {
       _path = newPath;
     }
-    _entries = await Provider.of<DmApi>(context, listen: false).getEntries(_path);
+    _entries = await Provider.of<DmApiClient>(context, listen: false).getEntries(_path);
     setState(() {});
   }
 

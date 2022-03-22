@@ -13,8 +13,8 @@ class MediaView extends StatefulWidget {
 class _MediaViewState extends State<MediaView> {
   @override
   Widget build(BuildContext context) {
-    return Provider<DmApi>(
-      create: (context) => DmApi(),
+    return Provider<DmApiClient>(
+      create: (context) => DmApiClient(),
       child: const MediaGrid(),
     );
   }

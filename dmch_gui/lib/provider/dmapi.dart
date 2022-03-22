@@ -9,10 +9,10 @@ import 'package:http/http.dart' as http;
 
 import '../models/media.dart';
 
-class DmApi {
+class DmApiClient {
   final baseUrl = 'http://localhost:5050/file/';
 
-  final path_utils.Context ctx = path_utils.url;
+  final path_utils.Context ctx = path_utils.posix;
   final http.Client _client = http.Client();
 
   Future<VideoInfo> getVideoInfo(String fpath) async {
@@ -27,12 +27,14 @@ class DmApi {
   }
 
   Future<List<Entry>> getPreviews(String fpath) async {
-    return getEntries(ctx.join(fpath, "previews"));
+    return getEntries(ctx.joinAll([fpath, "previews"]));
   }
 
-  Future<List<Entry>> getEntries(String fpath) async {
-    final resp = await _request(fpath);
-    return (json.decode(resp.body) as List<dynamic>).map((e) => Entry.fromMap(e)).toList();
+  Future<List<Entry>> getEntries(String dir) async {
+    final resp = await _request(dir);
+    return (json.decode(resp.body) as List<dynamic>)
+        .map((e) => Entry.fromMap(e, ctx.joinAll([dir, e])))
+        .toList();
   }
 
   Future<http.Response> _request(path) async {
@@ -40,5 +42,8 @@ class DmApi {
     return _client.get(uri);
   }
 
-  String getUrlFromFilepath(String fpath) => ctx.join(baseUrl, fpath == "/" ? "" : fpath);
+  String getUrlFromFilepath(String fpath) => path_utils.url.joinAll([
+        baseUrl,
+        fpath == "/" ? "" : fpath,
+      ]);
 }

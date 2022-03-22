@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dmch_gui/models/entry.dart';
+import 'package:dmch_gui/provider/dmapi.dart';
 import 'package:dmch_gui/widgets/media/grid.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
 class VideoInfoItem extends StatefulWidget {
   final String dirPath;
@@ -26,11 +28,9 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
   void initState() {
     super.initState();
     Future(() async {
-      final resp = await http.get(
-        Uri.parse(baseUrl + "/" + path.join(widget.dirPath, widget.entry.name, "previews")),
-      );
       _previewEntries =
-          (json.decode(resp.body) as List<dynamic>).map((e) => Entry.fromMap(e)).toList();
+          await Provider.of<DmApiClient>(context, listen: false).getPreviews(widget.entry.filePath);
+      setState(() {});
     });
   }
 

@@ -6,11 +6,9 @@ class Entry {
   final String name;
   final bool isDir;
   final MediaTypes mediaType;
-  Entry({
-    required this.name,
-    required this.isDir,
-    required this.mediaType,
-  });
+  final String filePath;
+
+  Entry({required this.name, required this.isDir, required this.mediaType, required this.filePath});
 
   Map<String, dynamic> toMap() {
     return {
@@ -20,15 +18,11 @@ class Entry {
     };
   }
 
-  factory Entry.fromMap(Map<String, dynamic> map) {
+  factory Entry.fromMap(Map<String, dynamic> map, String filePath) {
     return Entry(
-      name: map['name'] ?? '',
-      isDir: map['isDir'] ?? false,
-      mediaType: MediaTypes.values.firstWhere((e) => e.toString() == map['mediaType']),
-    );
+        name: map['name'] ?? '',
+        isDir: map['isDir'] ?? false,
+        mediaType: MediaTypes.values.firstWhere((e) => e.toString() == map['mediaType']),
+        filePath: filePath);
   }
-
-  String toJson() => json.encode(toMap());
-
-  factory Entry.fromJson(String source) => Entry.fromMap(json.decode(source));
 }
