@@ -1,4 +1,4 @@
-package dmfs
+package domefs
 
 import "time"
 

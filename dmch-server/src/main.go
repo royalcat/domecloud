@@ -5,17 +5,9 @@ import (
 	"dmch-server/src/delivery"
 )
 
-// func filesystem() webdav.FileSystem {
-// 	if err := os.Mkdir("./data", os.ModePerm); !os.IsExist(err) {
-// 		log.Fatalf("FATAL %v", err)
-// 	}
-// 	log.Printf("INFO using local filesystem at %s", "./data")
-// 	return webdav.Dir("./data")
-// }
-
 func main() {
 	config.Load()
 
-	router := delivery.NewDmServer()
-	router.Run()
+	server := delivery.NewDomeServer()
+	server.Run()
 }

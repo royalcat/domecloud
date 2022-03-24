@@ -1,10 +1,10 @@
-package dmfs
+package domefs
 
 import (
 	"context"
 
 	"dmch-server/src/config"
-	"dmch-server/src/dmfs/media"
+	"dmch-server/src/domefs/media"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,28 +18,28 @@ import (
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
-func (dmfs *DmFS) getPreviewsRealPath(name string) string {
-	return path.Join(dmfs.cacheDir, name, "previews")
+func (domefs *DomeFS) getPreviewsRealPath(name string) string {
+	return path.Join(domefs.cacheDir, name, "previews")
 }
 
-func (dmfs *DmFS) getInfoRealPath(name string) string {
-	return path.Join(dmfs.cacheDir, name, "info.json")
+func (domefs *DomeFS) getInfoRealPath(name string) string {
+	return path.Join(domefs.cacheDir, name, "info.json")
 }
 
-func (dmfs *DmFS) getPreviews(ctx context.Context, videoPath string, timestamps []time.Duration) []string {
+func (domefs *DomeFS) getPreviews(ctx context.Context, videoPath string, timestamps []time.Duration) []string {
 	names := make([]string, 0, len(timestamps))
 
-	os.MkdirAll(dmfs.getPreviewsRealPath(videoPath), os.ModePerm)
+	os.MkdirAll(domefs.getPreviewsRealPath(videoPath), os.ModePerm)
 	for i, timestamp := range timestamps {
 		filename := fmt.Sprintf("%d.webp", i)
-		output := path.Join(dmfs.getPreviewsRealPath(videoPath), filename)
+		output := path.Join(domefs.getPreviewsRealPath(videoPath), filename)
 		if _, err := os.Stat(output); os.IsNotExist(err) {
 			body, err := exec.CommandContext(
 				ctx,
 				"ffmpeg",
 				"-y",
 				"-ss", fmt.Sprintf("%f", timestamp.Seconds()),
-				"-i", fmt.Sprintf("%s", dmfs.RealPath(videoPath)),
+				"-i", fmt.Sprintf("%s", domefs.RealPath(videoPath)),
 				"-vf", fmt.Sprintf("scale=%d:-1", config.Config.Media.PreviewWidth),
 				"-vframes", "1",
 				output,
@@ -55,13 +55,13 @@ func (dmfs *DmFS) getPreviews(ctx context.Context, videoPath string, timestamps 
 	return names
 }
 
-func (dmfs *DmFS) getVideoInfo(ctx context.Context, fpath string) (*media.VideoInfo, error) {
-	stat, err := dmfs.Stat(fpath)
+func (domefs *DomeFS) getVideoInfo(ctx context.Context, fpath string) (*media.VideoInfo, error) {
+	stat, err := domefs.Stat(fpath)
 	if err != nil {
 		return nil, err
 	}
 
-	probe, err := ffprobe.ProbeURL(ctx, dmfs.RealPath(fpath))
+	probe, err := ffprobe.ProbeURL(ctx, domefs.RealPath(fpath))
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func (dmfs *DmFS) getVideoInfo(ctx context.Context, fpath string) (*media.VideoI
 	}
 
 	body, err := json.Marshal(info)
-	infopath := dmfs.getInfoRealPath(fpath)
+	infopath := domefs.getInfoRealPath(fpath)
 	os.MkdirAll(path.Dir(infopath), os.ModePerm)
 	os.WriteFile(infopath, body, os.ModePerm)
 

@@ -1,6 +1,6 @@
 package jsonfileserver
 
-import "dmch-server/src/cfs/media"
+import "dmch-server/src/domefs/media"
 
 type Entry struct {
 	Name     string         `json:"name"`

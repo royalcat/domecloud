@@ -1,7 +1,7 @@
 package jsonfileserver
 
 import (
-	"dmch-server/src/cfs"
+	"dmch-server/src/domefs"
 	"errors"
 	"fmt"
 	"io"
@@ -14,10 +14,10 @@ import (
 )
 
 type fileHandler struct {
-	root *cfs.DmFS
+	root *domefs.DomeFS
 }
 
-func FileServer(root *cfs.DmFS) http.Handler {
+func FileServer(root *domefs.DomeFS) http.Handler {
 	return &fileHandler{root}
 }
 

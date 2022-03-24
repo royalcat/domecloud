@@ -1,9 +1,9 @@
-package dmfs
+package domefs
 
 import (
 	"context"
 	"dmch-server/src/config"
-	"dmch-server/src/dmfs/media"
+	"dmch-server/src/domefs/media"
 	"io"
 	"io/fs"
 	"os"
@@ -12,68 +12,68 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type DmFS struct {
+type DomeFS struct {
 	rootDir  string
 	cacheDir string
 
 	vfuncVirtFile []map[string]VServe // [level][name]Serve
 }
 
-func NewDmFS() *DmFS {
-	return &DmFS{
+func NewDomeFS() *DomeFS {
+	return &DomeFS{
 		rootDir:  path.Clean(config.Config.RootFolder),
 		cacheDir: path.Clean(config.Config.CacheFolder),
 	}
 }
 
-func (dmfs *DmFS) ReadDir(name string) ([]fs.DirEntry, error) {
+func (domefs *DomeFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	cmd := path.Base(name)
 	if cmd == "previews" || cmd == "info" { // TODO седелать мапу с разными функциями
 		fpath := path.Dir(name)
-		mimetype, _ := dmfs.MimeType(path.Base(fpath))
+		mimetype, _ := domefs.MimeType(path.Base(fpath))
 		if mimetype.MediaType() == media.MediaTypeVideo { // BUG не брать тут из конфига
 			switch cmd {
 			case "previews":
 				ctx := context.Background()
-				info, _ := dmfs.getVideoInfo(ctx, name)
-				dmfs.getPreviews(ctx, name, getTimestamps(info.Duration))
-				return os.ReadDir(dmfs.getPreviewsRealPath(name))
+				info, _ := domefs.getVideoInfo(ctx, name)
+				domefs.getPreviews(ctx, name, getTimestamps(info.Duration))
+				return os.ReadDir(domefs.getPreviewsRealPath(name))
 			}
 		}
 	}
 
-	return os.ReadDir(dmfs.RealPath(name))
+	return os.ReadDir(domefs.RealPath(name))
 }
 
 // Open implements fs.StatFS
-func (dmfs *DmFS) Open(name string) (File, error) {
+func (domefs *DomeFS) Open(name string) (File, error) {
 
 	cmd := path.Base(name)
 	if cmd == "previews" || cmd == "info" { // TODO седелать мапу с разными функциями
 		fpath := path.Dir(name)
-		if stat, err := dmfs.Stat(fpath); err == nil && stat.IsDir() {
-			if stat, err = dmfs.Stat(name); err == nil { // return normal file if exists
-				return os.Open(dmfs.RealPath(name))
+		if stat, err := domefs.Stat(fpath); err == nil && stat.IsDir() {
+			if stat, err = domefs.Stat(name); err == nil { // return normal file if exists
+				return os.Open(domefs.RealPath(name))
 			} else {
 				return nil, fs.ErrInvalid
 			}
 		}
 
-		mimetype, _ := dmfs.MimeType(path.Base(fpath))
+		mimetype, _ := domefs.MimeType(path.Base(fpath))
 		if mimetype.MediaType() == media.MediaTypeVideo { // BUG не брать тут из конфига
 			switch cmd {
 			case "previews":
 				ctx := context.Background()
-				info, _ := dmfs.getVideoInfo(ctx, fpath)
-				dmfs.getPreviews(ctx, fpath, getTimestamps(info.Duration))
-				return os.Open(dmfs.getPreviewsRealPath(fpath))
+				info, _ := domefs.getVideoInfo(ctx, fpath)
+				domefs.getPreviews(ctx, fpath, getTimestamps(info.Duration))
+				return os.Open(domefs.getPreviewsRealPath(fpath))
 			case "info":
 				ctx := context.Background()
-				_, err := dmfs.getVideoInfo(ctx, fpath)
+				_, err := domefs.getVideoInfo(ctx, fpath)
 				if err != nil {
 					logrus.Errorf("error getting video info: %s", err.Error())
 				}
-				infoPath := dmfs.getInfoRealPath(fpath)
+				infoPath := domefs.getInfoRealPath(fpath)
 				return os.Open(infoPath)
 			}
 		} else {
@@ -82,21 +82,21 @@ func (dmfs *DmFS) Open(name string) (File, error) {
 	} else if path.Base(path.Dir(name)) == "previews" {
 		fpath := path.Dir(path.Dir(name))
 		ctx := context.Background()
-		info, _ := dmfs.getVideoInfo(ctx, fpath)
-		dmfs.getPreviews(ctx, fpath, getTimestamps(info.Duration))
-		return os.Open(path.Join(dmfs.getPreviewsRealPath(fpath), path.Base(name)))
+		info, _ := domefs.getVideoInfo(ctx, fpath)
+		domefs.getPreviews(ctx, fpath, getTimestamps(info.Duration))
+		return os.Open(path.Join(domefs.getPreviewsRealPath(fpath), path.Base(name)))
 	}
 
-	return os.Open(dmfs.RealPath(name))
+	return os.Open(domefs.RealPath(name))
 }
 
 // Stat implements fs.StatFS
-func (dmfs *DmFS) Stat(name string) (fs.FileInfo, error) {
-	return os.Stat(dmfs.RealPath(name))
+func (domefs *DomeFS) Stat(name string) (fs.FileInfo, error) {
+	return os.Stat(domefs.RealPath(name))
 }
 
-func (dmfs DmFS) RealPath(fpath string) string {
-	return path.Join(dmfs.rootDir, fpath)
+func (domefs DomeFS) RealPath(fpath string) string {
+	return path.Join(domefs.rootDir, fpath)
 }
 
 // var _ fs.StatFS = (*DmFS)(nil)

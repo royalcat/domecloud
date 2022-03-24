@@ -1,4 +1,4 @@
-package dmfs
+package domefs
 
 import (
 	"context"
@@ -10,12 +10,12 @@ import (
 
 type VServe func(name string) (File, error)
 
-func (dmfs *DmFS) initVirtFileFunctions() {}
+func (domefs *DomeFS) initVirtFileFunctions() {}
 
-func (dmfs *DmFS) serveVirtualEntry(name string) (File, error) {
+func (domefs *DomeFS) serveVirtualEntry(name string) (File, error) {
 
 	namePart := name
-	for _, funcMap := range dmfs.vfuncVirtFile {
+	for _, funcMap := range domefs.vfuncVirtFile {
 		cmd := path.Base(namePart)
 		for key, fun := range funcMap {
 			if cmd == key {
@@ -28,13 +28,13 @@ func (dmfs *DmFS) serveVirtualEntry(name string) (File, error) {
 	return nil, nil
 }
 
-func (dmfs *DmFS) serveInfoJson(originalName string) (File, error) {
+func (domefs *DomeFS) serveInfoJson(originalName string) (File, error) {
 	ctx := context.Background()
 	fpath := path.Dir(originalName)
-	_, err := dmfs.getVideoInfo(ctx, fpath)
+	_, err := domefs.getVideoInfo(ctx, fpath)
 	if err != nil {
 		logrus.Errorf("error getting video info: %s", err.Error())
 	}
-	infoPath := dmfs.getInfoRealPath(fpath)
+	infoPath := domefs.getInfoRealPath(fpath)
 	return os.Open(infoPath)
 }

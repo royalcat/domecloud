@@ -1,7 +1,7 @@
-package dmfs
+package domefs
 
 import (
-	"dmch-server/src/dmfs/media"
+	"dmch-server/src/domefs/media"
 	"errors"
 	"fmt"
 	"io"
@@ -14,21 +14,14 @@ import (
 // The algorithm uses at most sniffLen bytes to make its decision.
 const sniffLen = 512
 
-func (dmfs *DmFS) MimeType(name string) (media.MimeType, error) {
-	stat, err := dmfs.Stat(name)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return "", err
-		}
-		return "", fmt.Errorf("cant get file stat with error: %w", err)
-	}
-
-	ctype := mime.TypeByExtension(filepath.Ext(stat.Name()))
+func (domefs *DomeFS) MimeType(name string) (media.MimeType, error) {
+	ext := filepath.Ext(name)
+	ctype := mime.TypeByExtension(ext)
 	if ctype != "" {
 		return media.MimeType(ctype), nil
 	}
 
-	f, err := dmfs.Open(name)
+	f, err := domefs.Open(name)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return "", err
