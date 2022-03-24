@@ -1,9 +1,10 @@
-package cfs
+package dmfs
 
 import (
 	"context"
+
 	"dmch-server/src/config"
-	"dmch-server/src/media"
+	"dmch-server/src/dmfs/media"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,16 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
-
-// MAYBE тут может быть умная функция
-func getTimestamps(duration time.Duration) []time.Duration {
-	stamps := make([]time.Duration, 0, 1)
-	stampDuration := duration / 10
-	for i := 0; i < int(duration); i += int(stampDuration) {
-		stamps = append(stamps, time.Duration(i))
-	}
-	return stamps
-}
 
 func (dmfs *DmFS) getPreviewsRealPath(name string) string {
 	return path.Join(dmfs.cacheDir, name, "previews")

@@ -1,35 +1,33 @@
 package jsonfileserver
 
 import (
+	"dmch-server/src/cfs"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
-	"mime"
 	"mime/multipart"
 	"net/http"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type fileHandler struct {
-	root http.FileSystem
+	root *cfs.DmFS
 }
 
-func FileServer(root http.FileSystem) http.Handler {
+func FileServer(root *cfs.DmFS) http.Handler {
 	return &fileHandler{root}
 }
 
-func (f *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (fh *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	upath := r.URL.Path
 	if !strings.HasPrefix(upath, "/") {
 		upath = "/" + upath
 		r.URL.Path = upath
 	}
-	serveFile(w, r, f.root, path.Clean(upath), true)
+	fh.serveEntry(w, r, path.Clean(upath), true)
 }
 
 type condResult int
@@ -40,17 +38,8 @@ const (
 	condFalse
 )
 
-func serveFile(w http.ResponseWriter, r *http.Request, fs http.FileSystem, name string, redirect bool) {
-
-	f, err := fs.Open(name)
-	if err != nil {
-		msg, code := toHTTPError(err)
-		http.Error(w, msg, code)
-		return
-	}
-	defer f.Close()
-
-	d, err := f.Stat()
+func (fh *fileHandler) serveEntry(w http.ResponseWriter, r *http.Request, name string, redirect bool) {
+	stat, err := fh.root.Stat(name)
 	if err != nil {
 		msg, code := toHTTPError(err)
 		http.Error(w, msg, code)
@@ -61,7 +50,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, fs http.FileSystem, name 
 		// redirect to canonical path: / at end of directory url
 		// r.URL.Path always begins with /
 		url := r.URL.Path
-		if d.IsDir() {
+		if stat.IsDir() {
 			if url[len(url)-1] != '/' {
 				localRedirect(w, r, path.Base(url)+"/")
 				return
@@ -74,7 +63,7 @@ func serveFile(w http.ResponseWriter, r *http.Request, fs http.FileSystem, name 
 		}
 	}
 
-	if d.IsDir() {
+	if stat.IsDir() {
 		url := r.URL.Path
 		// redirect if the directory name doesn't end in a slash
 		if url == "" || url[len(url)-1] != '/' {
@@ -84,27 +73,38 @@ func serveFile(w http.ResponseWriter, r *http.Request, fs http.FileSystem, name 
 	}
 
 	// Still a directory?
-	if d.IsDir() {
-		if checkIfModifiedSince(r, d.ModTime()) == condFalse {
+	if stat.IsDir() {
+		if checkIfModifiedSince(r, stat.ModTime()) == condFalse {
 			writeNotModified(w)
 			return
 		}
-		setLastModifiedHeader(w, d.ModTime())
-		dirList(w, r, f)
+		setLastModifiedHeader(w, stat.ModTime())
+
+		fh.serveDir(w, r, name)
+
 		return
 	}
 
-	// serveContent will check modification time
-	sizeFunc := func() (int64, error) { return d.Size(), nil }
-	serveContent(w, r, d.Name(), d.ModTime(), sizeFunc, f)
+	fh.serveFile(w, r, name)
 }
 
-// The algorithm uses at most sniffLen bytes to make its decision.
-const sniffLen = 512
+func (fh *fileHandler) serveFile(w http.ResponseWriter, r *http.Request, name string) {
+	f, err := fh.root.Open(name)
+	if err != nil {
+		msg, code := toHTTPError(err)
+		http.Error(w, msg, code)
+		return
+	}
+	defer f.Close()
 
-func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime time.Time, sizeFunc func() (int64, error), content io.ReadSeeker) {
-	setLastModifiedHeader(w, modtime)
-	done, rangeReq := checkPreconditions(w, r, modtime)
+	stat, err := f.Stat()
+	if err != nil {
+		msg, code := toHTTPError(err)
+		http.Error(w, msg, code)
+		return
+	}
+	setLastModifiedHeader(w, stat.ModTime())
+	done, rangeReq := checkPreconditions(w, r, stat.ModTime())
 	if done {
 		return
 	}
@@ -116,32 +116,23 @@ func serveContent(w http.ResponseWriter, r *http.Request, name string, modtime t
 	ctypes, haveType := w.Header()["Content-Type"]
 	var ctype string
 	if !haveType {
-		ctype = mime.TypeByExtension(filepath.Ext(name))
-		if ctype == "" {
-			// read a chunk to decide between utf-8 text and binary
-			var buf [sniffLen]byte
-			n, _ := io.ReadFull(content, buf[:])
-			ctype = http.DetectContentType(buf[:n])
-			_, err := content.Seek(0, io.SeekStart) // rewind to output whole file
-			if err != nil {
-				http.Error(w, "seeker can't seek", http.StatusInternalServerError)
-				return
-			}
+		ctype, err := fh.root.MimeType(name)
+		if err != nil {
+			msg, code := toHTTPError(err)
+			http.Error(w, msg, code)
+			return
 		}
-		w.Header().Set("Content-Type", ctype)
+		w.Header().Set("Content-Type", string(ctype))
 	} else if len(ctypes) > 0 {
 		ctype = ctypes[0]
 	}
 
-	size, err := sizeFunc()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	size := stat.Size()
 
 	// handle Content-Range header.
 	sendSize := size
-	var sendContent io.Reader = content
+	var sendContent io.Reader = f
+	var content io.ReadSeeker = f
 	if size >= 0 {
 		ranges, err := parseRange(rangeReq, size)
 		if err != nil {
@@ -239,52 +230,4 @@ func localRedirect(w http.ResponseWriter, r *http.Request, newPath string) {
 	}
 	w.Header().Set("Location", newPath)
 	w.WriteHeader(http.StatusMovedPermanently)
-}
-
-func writeNotModified(w http.ResponseWriter) {
-	// RFC 7232 section 4.1:
-	// a sender SHOULD NOT generate representation metadata other than the
-	// above listed fields unless said metadata exists for the purpose of
-	// guiding cache updates (e.g., Last-Modified might be useful if the
-	// response does not have an ETag field).
-	h := w.Header()
-	delete(h, "Content-Type")
-	delete(h, "Content-Length")
-	if h.Get("Etag") != "" {
-		delete(h, "Last-Modified")
-	}
-	w.WriteHeader(http.StatusNotModified)
-}
-
-func checkPreconditions(w http.ResponseWriter, r *http.Request, modtime time.Time) (done bool, rangeHeader string) {
-	// This function carefully follows RFC 7232 section 6.
-	ch := checkIfMatch(w, r)
-	if ch == condNone {
-		ch = checkIfUnmodifiedSince(r, modtime)
-	}
-	if ch == condFalse {
-		w.WriteHeader(http.StatusPreconditionFailed)
-		return true, ""
-	}
-	switch checkIfNoneMatch(w, r) {
-	case condFalse:
-		if r.Method == "GET" || r.Method == "HEAD" {
-			writeNotModified(w)
-			return true, ""
-		} else {
-			w.WriteHeader(http.StatusPreconditionFailed)
-			return true, ""
-		}
-	case condNone:
-		if checkIfModifiedSince(r, modtime) == condFalse {
-			writeNotModified(w)
-			return true, ""
-		}
-	}
-
-	rangeHeader = r.Header.Get("Range")
-	if rangeHeader != "" && checkIfRange(w, r, modtime) == condFalse {
-		rangeHeader = ""
-	}
-	return false, rangeHeader
 }

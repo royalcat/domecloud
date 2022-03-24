@@ -136,3 +136,50 @@ func checkIfModifiedSince(r *http.Request, modtime time.Time) condResult {
 	}
 	return condTrue
 }
+func writeNotModified(w http.ResponseWriter) {
+	// RFC 7232 section 4.1:
+	// a sender SHOULD NOT generate representation metadata other than the
+	// above listed fields unless said metadata exists for the purpose of
+	// guiding cache updates (e.g., Last-Modified might be useful if the
+	// response does not have an ETag field).
+	h := w.Header()
+	delete(h, "Content-Type")
+	delete(h, "Content-Length")
+	if h.Get("Etag") != "" {
+		delete(h, "Last-Modified")
+	}
+	w.WriteHeader(http.StatusNotModified)
+}
+
+func checkPreconditions(w http.ResponseWriter, r *http.Request, modtime time.Time) (done bool, rangeHeader string) {
+	// This function carefully follows RFC 7232 section 6.
+	ch := checkIfMatch(w, r)
+	if ch == condNone {
+		ch = checkIfUnmodifiedSince(r, modtime)
+	}
+	if ch == condFalse {
+		w.WriteHeader(http.StatusPreconditionFailed)
+		return true, ""
+	}
+	switch checkIfNoneMatch(w, r) {
+	case condFalse:
+		if r.Method == "GET" || r.Method == "HEAD" {
+			writeNotModified(w)
+			return true, ""
+		} else {
+			w.WriteHeader(http.StatusPreconditionFailed)
+			return true, ""
+		}
+	case condNone:
+		if checkIfModifiedSince(r, modtime) == condFalse {
+			writeNotModified(w)
+			return true, ""
+		}
+	}
+
+	rangeHeader = r.Header.Get("Range")
+	if rangeHeader != "" && checkIfRange(w, r, modtime) == condFalse {
+		rangeHeader = ""
+	}
+	return false, rangeHeader
+}

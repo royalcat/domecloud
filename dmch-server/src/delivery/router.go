@@ -26,7 +26,7 @@ func (d *DmRouter) initRouter() {
 
 	router.Handler(
 		"GET", "/file/*path",
-		http.StripPrefix("/file/", jsonfileserver.FileServer(http.FS(cfs.NewDmFS()))),
+		http.StripPrefix("/file/", jsonfileserver.FileServer(cfs.NewDmFS())),
 	)
 
 	d.router = router

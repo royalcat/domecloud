@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+	"mime"
 	"os/exec"
 	"path"
 	"strings"
@@ -15,7 +17,6 @@ var Config = struct {
 
 	Media struct {
 		PreviewWidth int `default:"300"`
-		Extensions   []string
 	}
 }{}
 
@@ -35,11 +36,6 @@ func Reload(_ interface{}) {
 	if Config.CacheFolder == "" {
 		Config.CacheFolder = path.Join(Config.RootFolder, ".cache")
 	}
-
-	if Config.Media.Extensions == nil || len(Config.Media.Extensions) == 0 {
-		Config.Media.Extensions = ffmpegAvalibleExtensions()
-	}
-
 }
 
 func ffmpegAvalibleExtensions() []string {
@@ -48,5 +44,11 @@ func ffmpegAvalibleExtensions() []string {
 		logrus.Panicf("Cant get avalible extensions from ffmpeg with error: %s", err.Error())
 	}
 
-	return strings.Split(string(out), "\n")
+	extensions := strings.Split(string(out), "\n")
+
+	for _, ext := range extensions {
+		mime.AddExtensionType("."+ext, fmt.Sprint("video/", ext))
+	}
+
+	return extensions
 }

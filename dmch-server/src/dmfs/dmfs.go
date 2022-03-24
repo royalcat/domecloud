@@ -1,13 +1,13 @@
-package cfs
+package dmfs
 
 import (
 	"context"
 	"dmch-server/src/config"
-
+	"dmch-server/src/dmfs/media"
+	"io"
 	"io/fs"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -15,6 +15,8 @@ import (
 type DmFS struct {
 	rootDir  string
 	cacheDir string
+
+	vfuncVirtFile []map[string]VServe // [level][name]Serve
 }
 
 func NewDmFS() *DmFS {
@@ -27,8 +29,9 @@ func NewDmFS() *DmFS {
 func (dmfs *DmFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	cmd := path.Base(name)
 	if cmd == "previews" || cmd == "info" { // TODO седелать мапу с разными функциями
-		dir := path.Dir(name)
-		if EndsWithOneOf(dir, config.Config.Media.Extensions) { // BUG не брать тут из конфига
+		fpath := path.Dir(name)
+		mimetype, _ := dmfs.MimeType(path.Base(fpath))
+		if mimetype.MediaType() == media.MediaTypeVideo { // BUG не брать тут из конфига
 			switch cmd {
 			case "previews":
 				ctx := context.Background()
@@ -43,7 +46,7 @@ func (dmfs *DmFS) ReadDir(name string) ([]fs.DirEntry, error) {
 }
 
 // Open implements fs.StatFS
-func (dmfs *DmFS) Open(name string) (fs.File, error) {
+func (dmfs *DmFS) Open(name string) (File, error) {
 
 	cmd := path.Base(name)
 	if cmd == "previews" || cmd == "info" { // TODO седелать мапу с разными функциями
@@ -56,7 +59,8 @@ func (dmfs *DmFS) Open(name string) (fs.File, error) {
 			}
 		}
 
-		if EndsWithOneOf(strings.ToLower(fpath), config.Config.Media.Extensions) { // BUG не брать тут из конфига
+		mimetype, _ := dmfs.MimeType(path.Base(fpath))
+		if mimetype.MediaType() == media.MediaTypeVideo { // BUG не брать тут из конфига
 			switch cmd {
 			case "previews":
 				ctx := context.Background()
@@ -95,41 +99,14 @@ func (dmfs DmFS) RealPath(fpath string) string {
 	return path.Join(dmfs.rootDir, fpath)
 }
 
-var _ fs.StatFS = (*DmFS)(nil)
-var _ fs.ReadDirFS = (*DmFS)(nil)
+// var _ fs.StatFS = (*DmFS)(nil)
+// var _ fs.ReadDirFS = (*DmFS)(nil)
 
-func EndsWithOneOf(s string, ends []string) bool {
-	for _, end := range ends {
-		if strings.HasSuffix(s, end) {
-			return true
-		}
-	}
-	return false
+type File interface {
+	fs.File
+	io.Closer
+	io.Reader
+	io.Seeker
+	Readdir(count int) ([]fs.FileInfo, error)
+	Stat() (fs.FileInfo, error)
 }
-
-// type PreviewVFile struct {
-// 	file     *os.File
-// 	realpath string
-// }
-
-// // Info implements fs.DirEntry
-// func (f *PreviewVFile) Info() (fs.FileInfo, error) {
-// 	fs.Dir
-// }
-
-// // IsDir implements fs.DirEntry
-// func (*PreviewVFile) IsDir() bool {
-// 	return false
-// }
-
-// // Name implements fs.DirEntry
-// func (f *PreviewVFile) Name() string {
-// 	return path.Base(f.realpath)
-// }
-
-// // Type implements fs.DirEntry
-// func (*PreviewVFile) Type() fs.FileMode {
-// 	panic("unimplemented")
-// }
-
-// var _ fs.DirEntry = (*PreviewVFile)(nil)
