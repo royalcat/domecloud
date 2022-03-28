@@ -27,9 +27,19 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
   @override
   void initState() {
     super.initState();
+
     Future(() async {
       _previewEntries =
           await Provider.of<DmApiClient>(context, listen: false).getPreviews(widget.entry.filePath);
+      for (final e in _previewEntries) {
+        precacheImage(
+          NetworkImage(
+            Provider.of<DmApiClient>(context, listen: false).getUrlFromFilepath(e.filePath),
+          ),
+          context,
+        );
+      }
+
       setState(() {});
     });
   }
@@ -44,10 +54,8 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
               ? VideoPreviews(
                   previewUrls: _previewEntries
                       .map(
-                        (e) =>
-                            baseUrl +
-                            "/" +
-                            path.join(widget.dirPath, widget.entry.name, "previews", e.name),
+                        (e) => Provider.of<DmApiClient>(context, listen: false)
+                            .getUrlFromFilepath(e.filePath),
                       )
                       .toList(),
                 )

@@ -10,7 +10,7 @@ type Resolution struct {
 }
 
 type VideoInfo struct {
-	Path       string        `json:"name"`
+	Path       string        `json:"path"`
 	Size       int64         `json:"size"`
 	ModTime    time.Time     `json:"modTime"`
 	Duration   time.Duration `json:"duration"`

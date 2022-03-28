@@ -19,7 +19,7 @@ class Entry {
     };
   }
 
-  factory Entry.fromMap(Map<String, dynamic> map, String dir) {
+  factory Entry.fromMap(String dir, Map<String, dynamic> map) {
     return Entry(
       name: map['name'] ?? '',
       isDir: map['isDir'] ?? false,

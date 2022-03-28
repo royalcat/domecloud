@@ -33,7 +33,7 @@ class DmApiClient {
 
   Future<List<Entry>> getEntries(String dir) async {
     final resp = await _request(dir);
-    return (json.decode(resp.body) as List<dynamic>).map((e) => Entry.fromMap(e, dir)).toList();
+    return (json.decode(resp.body) as List<dynamic>).map((e) => Entry.fromMap(dir, e)).toList();
   }
 
   Future<http.Response> _request(path) async {
