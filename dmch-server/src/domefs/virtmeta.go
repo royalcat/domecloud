@@ -1,19 +1,28 @@
 package domefs
 
 import (
-	"context"
-	"os"
+	"dmch-server/src/domefs/media"
+	"errors"
 	"path"
 
 	"github.com/sirupsen/logrus"
 )
 
-type VServe func(name string) (File, error)
+type vServeFile func(name string) (string, error) // returns "", nil  if must be sorted as normal file
 
-func (domefs *DomeFS) initVirtFileFunctions() {}
+func (domefs *DomeFS) initVirtFileFunctions() {
+	domefs.vfuncVirtFile = []map[string]vServeFile{
+		{
+			"info.json": domefs.serveInfoJson,
+			"previews":  domefs.servePreviewsDir,
+		},
+		{
+			"previews": domefs.servePreview,
+		},
+	}
+}
 
-func (domefs *DomeFS) serveVirtualEntry(name string) (File, error) {
-
+func (domefs *DomeFS) serveVirtualEntry(name string) (string, error) {
 	namePart := name
 	for _, funcMap := range domefs.vfuncVirtFile {
 		cmd := path.Base(namePart)
@@ -25,16 +34,48 @@ func (domefs *DomeFS) serveVirtualEntry(name string) (File, error) {
 		namePart = path.Dir(namePart)
 	}
 
-	return nil, nil
+	return "", nil
 }
 
-func (domefs *DomeFS) serveInfoJson(originalName string) (File, error) {
-	ctx := context.Background()
+func (domefs *DomeFS) serveInfoJson(originalName string) (string, error) {
 	fpath := path.Dir(originalName)
-	_, err := domefs.getVideoInfo(ctx, fpath)
+
+	mimetype, err := domefs.MimeType(path.Base(fpath))
+	if err != nil {
+		return "", err
+	}
+	if mimetype.MediaType() != media.MediaTypeVideo {
+		return "", errors.New("invalid file media type")
+	}
+
+	_, err = domefs.getVideoInfo(fpath)
 	if err != nil {
 		logrus.Errorf("error getting video info: %s", err.Error())
+		return "", err
 	}
 	infoPath := domefs.getInfoRealPath(fpath)
-	return os.Open(infoPath)
+
+	return infoPath, nil
+}
+
+func (domefs *DomeFS) servePreviewsDir(originalName string) (string, error) {
+	fpath := path.Dir(originalName)
+	info, err := domefs.getVideoInfo(fpath)
+	if err != nil {
+		logrus.Errorf("error getting video info: %s", err.Error())
+		return "", err
+	}
+	domefs.getPreviews(fpath, getTimestamps(info.Duration))
+	return domefs.getPreviewsRealPath(fpath), nil
+}
+
+func (domefs *DomeFS) servePreview(originalName string) (string, error) {
+	fpath := path.Dir(path.Dir(originalName))
+	info, err := domefs.getVideoInfo(fpath)
+	if err != nil {
+		logrus.Errorf("error getting video info: %s", err.Error())
+		return "", err
+	}
+	domefs.getPreviews(fpath, getTimestamps(info.Duration))
+	return path.Join(domefs.getPreviewsRealPath(fpath), path.Base(originalName)), nil
 }

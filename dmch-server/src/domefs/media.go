@@ -26,7 +26,7 @@ func (domefs *DomeFS) getInfoRealPath(name string) string {
 	return path.Join(domefs.cacheDir, name, "info.json")
 }
 
-func (domefs *DomeFS) getPreviews(ctx context.Context, videoPath string, timestamps []time.Duration) []string {
+func (domefs *DomeFS) getPreviews(videoPath string, timestamps []time.Duration) []string {
 	names := make([]string, 0, len(timestamps))
 
 	os.MkdirAll(domefs.getPreviewsRealPath(videoPath), os.ModePerm)
@@ -34,12 +34,11 @@ func (domefs *DomeFS) getPreviews(ctx context.Context, videoPath string, timesta
 		filename := fmt.Sprintf("%d.webp", i)
 		output := path.Join(domefs.getPreviewsRealPath(videoPath), filename)
 		if _, err := os.Stat(output); os.IsNotExist(err) {
-			body, err := exec.CommandContext(
-				ctx,
+			body, err := exec.Command(
 				"ffmpeg",
 				"-y",
 				"-ss", fmt.Sprintf("%f", timestamp.Seconds()),
-				"-i", fmt.Sprintf("%s", domefs.RealPath(videoPath)),
+				"-i", fmt.Sprintf("%s", domefs.realPath(videoPath)),
 				"-vf", fmt.Sprintf("scale=%d:-1", config.Config.Media.PreviewWidth),
 				"-vframes", "1",
 				output,
@@ -55,13 +54,13 @@ func (domefs *DomeFS) getPreviews(ctx context.Context, videoPath string, timesta
 	return names
 }
 
-func (domefs *DomeFS) getVideoInfo(ctx context.Context, fpath string) (*media.VideoInfo, error) {
-	stat, err := domefs.Stat(fpath)
+func (domefs *DomeFS) getVideoInfo(fpath string) (*media.VideoInfo, error) {
+	stat, err := os.Stat(domefs.realPath(fpath))
 	if err != nil {
 		return nil, err
 	}
 
-	probe, err := ffprobe.ProbeURL(ctx, domefs.RealPath(fpath))
+	probe, err := ffprobe.ProbeURL(context.TODO(), domefs.realPath(fpath))
 	if err != nil {
 		return nil, err
 	}

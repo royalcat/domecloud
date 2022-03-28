@@ -35,8 +35,10 @@ require (
 
 require (
 	github.com/256dpi/lungo v0.2.12
+	github.com/dsnet/golib/memfile v1.0.0
+	github.com/puzpuzpuz/xsync v1.2.0
 	github.com/rs/zerolog v1.26.1
 	github.com/sirupsen/logrus v1.8.1
-	golang.org/x/exp v0.0.0-20220324144552-032f0433de08
+	golang.org/x/exp v0.0.0-20220325121720-054d8573a5d8
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 )

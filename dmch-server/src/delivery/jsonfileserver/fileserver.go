@@ -221,7 +221,7 @@ func toHTTPError(err error) (msg string, httpStatus int) {
 		return "403 Forbidden", http.StatusForbidden
 	}
 	// Default:
-	return "500 Internal Server Error", http.StatusInternalServerError
+	return fmt.Sprintf("500 Internal Server Error\n%s", err.Error()), http.StatusInternalServerError
 }
 
 func localRedirect(w http.ResponseWriter, r *http.Request, newPath string) {
