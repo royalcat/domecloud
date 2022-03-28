@@ -1,28 +1,30 @@
 import 'dart:convert';
+import 'package:path/path.dart' as path_utils;
 
 enum MediaTypes { none, video, photo }
 
 class Entry {
   final String name;
   final bool isDir;
-  final MediaTypes mediaType;
+  final String mimeType;
   final String filePath;
 
-  Entry({required this.name, required this.isDir, required this.mediaType, required this.filePath});
+  Entry({required this.name, required this.isDir, required this.mimeType, required this.filePath});
 
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'isDir': isDir,
-      'mediaType': mediaType.toString(),
+      'mimeType': mimeType.toString(),
     };
   }
 
-  factory Entry.fromMap(Map<String, dynamic> map, String filePath) {
+  factory Entry.fromMap(Map<String, dynamic> map, String dir) {
     return Entry(
-        name: map['name'] ?? '',
-        isDir: map['isDir'] ?? false,
-        mediaType: MediaTypes.values.firstWhere((e) => e.toString() == map['mediaType']),
-        filePath: filePath);
+      name: map['name'] ?? '',
+      isDir: map['isDir'] ?? false,
+      mimeType: map['mimeType'],
+      filePath: path_utils.posix.joinAll([dir, map['name'] ?? '']),
+    );
   }
 }

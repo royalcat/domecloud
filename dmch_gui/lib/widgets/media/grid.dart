@@ -39,6 +39,16 @@ class _MediaGridState extends State<MediaGrid> {
 
   @override
   Widget build(BuildContext context) {
+    // return Column(
+    //   children: [
+    //     Container(
+    //       height: 100,
+    //       padding: const EdgeInsets.all(10),
+    //       child: Text(_path),
+    //     ),
+    //   ],
+    // );
+
     return GridView.extent(
       maxCrossAxisExtent: 200,
       children: _entries
