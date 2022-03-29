@@ -85,6 +85,21 @@ class _VideoPreviewsState extends State<VideoPreviews> {
   int currentPreview = 0;
   Timer? _timer;
 
+  @override
+  void initState() {
+    super.initState();
+    Future.value(precacheNext);
+  }
+
+  void precacheNext() async {
+    if (currentPreview != widget.previewUrls.length - 1) {
+      precacheImage(
+        NetworkImage(widget.previewUrls[currentPreview + 1]),
+        context,
+      );
+    }
+  }
+
   void startRotate(PointerEnterEvent event) {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -93,6 +108,7 @@ class _VideoPreviewsState extends State<VideoPreviews> {
           currentPreview = 0;
         } else {
           currentPreview++;
+          precacheNext();
         }
       });
     });
