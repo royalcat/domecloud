@@ -29,8 +29,9 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
     super.initState();
 
     Future(() async {
-      _previewEntries =
-          await Provider.of<DmApiClient>(context, listen: false).getPreviews(widget.entry.filePath);
+      _previewEntries = await Provider.of<DmApiClient>(context, listen: false)
+          .getPreviews(widget.entry.filePath)
+          .toList();
       for (final e in _previewEntries) {
         precacheImage(
           NetworkImage(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dmch_gui/models/entry.dart';
@@ -22,40 +23,67 @@ class MediaGrid extends StatefulWidget {
 }
 
 class _MediaGridState extends State<MediaGrid> {
-  String get _path => _pathController.text;
-  set _path(String newpath) => _pathController.text = newpath;
   final _pathController = TextEditingController(text: basePath);
+  var _suggestions = <String>[];
 
   List<Entry> _entries = [];
 
   Future<void> dirUp() async {
-    if (_path != "/") {
-      await changePath(path_utils.dirname(_path));
+    if (_pathController.text != "/") {
+      _pathController.text = path_utils.dirname(_pathController.text);
+      await updateViewForPath();
     }
   }
 
-  Future<void> dirDown(String dir) async => await changePath(path_utils.dirname(_path));
+  Future<void> dirDown(String dir) async {
+    _pathController.text = path_utils.joinAll([_pathController.text, dir]);
+    await updateViewForPath();
+  }
 
-  Future<void> changePath(String newPath) async {
-    _path = newPath;
-
+  Future<void> updateViewForPath() async {
     try {
-      _entries = await Provider.of<DmApiClient>(context, listen: false).getEntries(_path);
+      _entries = await Provider.of<DmApiClient>(context, listen: false)
+          .getEntries(_pathController.text)
+          .toList();
       setState(() {});
     } catch (e) {
-      print("exception for path: " + _path + ": " + e.toString());
+      debugPrint("exception for path: " + _pathController.text + ": " + e.toString());
+      await dirUp();
     }
+  }
+
+  Future<List<String>> suggestions(String prefix) async {
+    try {
+      if (prefix.endsWith("/")) {
+        final entries = await Provider.of<DmApiClient>(context, listen: false).getEntries(prefix);
+        return entries.where((e) => !e.isDir).map<String>((e) => e.name).toList();
+      } else {
+        final dir = path_utils.dirname(prefix);
+        final entries = await Provider.of<DmApiClient>(context, listen: false).getEntries(dir);
+        final query = path_utils.basename(prefix);
+        return entries
+            .where((e) => !e.isDir)
+            .where((element) => element.name.startsWith(query))
+            .map<String>((e) => path_utils.joinAll([dir, e.name]))
+            .toList();
+      }
+    } catch (e) {
+      print("exception for path: " + _pathController.text + ": " + e.toString());
+    }
+
+    return <String>[];
   }
 
   @override
   void initState() {
     super.initState();
 
+    Future((() async => await updateViewForPath()));
     _pathController.addListener(() {
-      changePath(_path);
+      suggestions(_pathController.text).then((value) => setState(() {
+            _suggestions = value;
+          }));
     });
-
-    Future((() async => await changePath(basePath)));
   }
 
   @override
@@ -66,14 +94,18 @@ class _MediaGridState extends State<MediaGrid> {
           height: 80,
           child: Row(children: [
             IconButton(
-              onPressed: () => changePath(path_utils.dirname(_path)),
+              onPressed: () => updateViewForPath(),
               icon: const Icon(Icons.arrow_back),
             ),
             Expanded(
-              child: TextField(
-                controller: _pathController,
-              ),
+              child: Autocomplete<String>(
+                  optionsBuilder: (textEditingValue) => suggestions(textEditingValue.text)),
             ),
+            //  TextField(
+            //   onEditingComplete: () => updateViewForPath(),
+            //   autofillHints: _suggestions,
+            //   controller: _pathController,
+            // ),
           ]),
         ),
         Expanded(
@@ -83,7 +115,7 @@ class _MediaGridState extends State<MediaGrid> {
               ..._entries
                   .where((element) => element.isDir)
                   .map((e) => GestureDetector(
-                        onDoubleTap: () => changePath(path_utils.joinAll([_path, e.name])),
+                        onDoubleTap: () => dirDown(e.name),
                         child: FolderItem(entry: e),
                       ))
                   .toList(),

@@ -27,18 +27,20 @@ class DmApiClient {
     }
   }
 
-  Future<List<Entry>> getPreviews(String fpath) async {
+  Stream<Entry> getPreviews(String fpath) {
     return getEntries(ctx.joinAll([fpath, "previews"]));
   }
 
-  Future<List<Entry>> getEntries(String dir) async {
+  Stream<Entry> getEntries(String dir) async* {
     final resp = await _request(dir);
-    return (json.decode(resp.body) as List<dynamic>).map((e) => Entry.fromMap(dir, e)).toList();
+
+    yield* Stream.fromIterable(
+      (json.decode(resp.body) as List<dynamic>).map((e) => Entry.fromMap(dir, e)),
+    );
   }
 
   Future<http.Response> _request(path) async {
-    final uri = Uri.parse(getUrlFromFilepath(path));
-    return _client.get(uri);
+    return await _client.get(Uri.parse(getUrlFromFilepath(path)));
   }
 
   String getUrlFromFilepath(String fpath) => host + ctx.joinAll([baseUrl, fpath.trimLeading("/")]);
