@@ -3,6 +3,7 @@ package delivery
 import (
 	"dmch-server/src/delivery/jsonfileserver"
 	"dmch-server/src/domefs"
+	"dmch-server/src/store"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -11,11 +12,14 @@ import (
 
 type DomeServer struct {
 	router *httprouter.Router
+
+	usersStore *store.UsersStore
 }
 
-func NewDomeServer() *DomeServer {
+func NewDomeServer(usersStore *store.UsersStore) *DomeServer {
 	server := &DomeServer{
-		router: httprouter.New(),
+		router:     httprouter.New(),
+		usersStore: usersStore,
 	}
 	server.initRouter()
 	return server
@@ -26,7 +30,12 @@ func (d *DomeServer) initRouter() {
 
 	router.Handler(
 		"GET", "/file/*path",
-		http.StripPrefix("/file/", jsonfileserver.FileServer(domefs.NewDomeFS())),
+		d.AuthWrapper(
+			http.StripPrefix(
+				"/file/",
+				jsonfileserver.FileServer(domefs.NewDomeFS()),
+			),
+		),
 	)
 
 	d.router = router
