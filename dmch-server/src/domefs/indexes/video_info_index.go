@@ -2,6 +2,7 @@ package indexes
 
 import (
 	"dmch-server/src/domefs/media"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -30,17 +31,26 @@ func (vii *VideoInfoIndex) Set(v media.VideoInfo) {
 	vii.mutex.Lock()
 
 	vii.pathToInfo[v.Path] = v
-	vii.durationIndex.Set(v.Duration, v.Path)
+	vii.durationIndex.Set(v.Duration, path.Clean(v.Path))
 
 	vii.mutex.Unlock()
 }
 
-func (vii *VideoInfoIndex) GetSortedByDuration(dir string) []media.VideoInfo {
+func (vii *VideoInfoIndex) GetSortedByDuration(targetDir string, recursive bool) []media.VideoInfo {
 	out := make([]media.VideoInfo, 0, len(vii.pathToInfo)/2)
+	targetDir = path.Clean(targetDir)
 
-	for _, path := range vii.durationIndex.All() {
-		if strings.HasPrefix(path, dir) {
-			out = append(out, vii.pathToInfo[path])
+	if recursive {
+		for _, videopath := range vii.durationIndex.All() {
+			if strings.HasPrefix(videopath, targetDir) {
+				out = append(out, vii.pathToInfo[videopath])
+			}
+		}
+	} else {
+		for _, videopath := range vii.durationIndex.All() {
+			if match, err := path.Match(targetDir+"/*", videopath); err != nil && match {
+				out = append(out, vii.pathToInfo[videopath])
+			}
 		}
 	}
 
