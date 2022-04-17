@@ -16,7 +16,8 @@ import (
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
-func (mw *MediaCache) generateCache(ctx context.Context, virtpath, realpath string) error {
+func (mw *MediaCache) generateCache(ctx context.Context, virtpath string) error {
+	realpath := mw.dfs.RealPath(virtpath)
 	info, err := mw.genVideoInfo(ctx, virtpath, realpath)
 	if err != nil {
 		mw.log.Errorf("Eror generating video info: %w", err)
@@ -39,6 +40,7 @@ func (mw *MediaCache) genPreviews(ctx context.Context, virtpath, realpath string
 		filename := fmt.Sprintf("%d.webp", i)
 		output := path.Join(previewsDir, filename)
 		if _, err := os.Stat(output); os.IsNotExist(err) {
+			mw.fflock.Lock()
 			body, err := exec.CommandContext(ctx,
 				"ffmpeg",
 				"-y",
@@ -48,6 +50,7 @@ func (mw *MediaCache) genPreviews(ctx context.Context, virtpath, realpath string
 				"-vframes", "1",
 				output,
 			).CombinedOutput()
+			mw.fflock.Unlock()
 			if err != nil {
 				mw.log.Errorf("error creating preview: %s with output: %s", err.Error(), string(body))
 				return err
@@ -63,7 +66,9 @@ func (mw *MediaCache) genVideoInfo(ctx context.Context, virtpath, realpath strin
 		return nil, err
 	}
 
-	probe, err := ffprobe.ProbeURL(context.TODO(), realpath)
+	mw.fflock.Lock()
+	probe, err := ffprobe.ProbeURL(ctx, realpath)
+	mw.fflock.Unlock()
 	if err != nil {
 		return nil, err
 	}

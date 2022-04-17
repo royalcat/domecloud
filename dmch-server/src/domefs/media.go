@@ -38,7 +38,7 @@ func (domefs *DomeFS) getPreviews(videoPath string, timestamps []time.Duration) 
 				"ffmpeg",
 				"-y",
 				"-ss", fmt.Sprintf("%f", timestamp.Seconds()),
-				"-i", fmt.Sprintf("%s", domefs.realPath(videoPath)),
+				"-i", fmt.Sprintf("%s", domefs.RealPath(videoPath)),
 				"-vf", fmt.Sprintf("scale=%d:-1", config.Config.Media.PreviewWidth),
 				"-vframes", "1",
 				output,
@@ -55,12 +55,12 @@ func (domefs *DomeFS) getPreviews(videoPath string, timestamps []time.Duration) 
 }
 
 func (domefs *DomeFS) getVideoInfo(fpath string) (*media.VideoInfo, error) {
-	stat, err := os.Stat(domefs.realPath(fpath))
+	stat, err := os.Stat(domefs.RealPath(fpath))
 	if err != nil {
 		return nil, err
 	}
 
-	probe, err := ffprobe.ProbeURL(context.TODO(), domefs.realPath(fpath))
+	probe, err := ffprobe.ProbeURL(context.TODO(), domefs.RealPath(fpath))
 	if err != nil {
 		return nil, err
 	}

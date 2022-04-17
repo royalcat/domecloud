@@ -47,7 +47,7 @@ func (domefs *DomeFS) ReadDir(name string) ([]fs.DirEntry, error) {
 		return nil, err
 	}
 
-	return os.ReadDir(domefs.realPath(name))
+	return os.ReadDir(domefs.RealPath(name))
 }
 
 // Open implements fs.StatFS
@@ -98,7 +98,7 @@ func (domefs *DomeFS) Open(name string) (File, error) {
 		return nil, err
 	}
 
-	return os.Open(domefs.realPath(name))
+	return os.Open(domefs.RealPath(name))
 }
 
 func (domefs *DomeFS) Stat(name string) (fs.FileInfo, error) {
@@ -109,11 +109,11 @@ func (domefs *DomeFS) Stat(name string) (fs.FileInfo, error) {
 		return nil, err
 	}
 
-	realPath := domefs.realPath(name)
+	realPath := domefs.RealPath(name)
 	return os.Stat(realPath)
 }
 
-func (domefs DomeFS) realPath(fpath string) string {
+func (domefs DomeFS) RealPath(fpath string) string {
 	return path.Join(domefs.rootDir, fpath)
 }
 

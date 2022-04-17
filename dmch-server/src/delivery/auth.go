@@ -3,7 +3,6 @@ package delivery
 import (
 	"encoding/base64"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -19,7 +18,6 @@ func (d *DomeServer) AuthWrapper(h http.Handler) http.Handler {
 			return
 		}
 		payload, _ := base64.StdEncoding.DecodeString(auth[1])
-		log.Println(auth[1])
 		pair := strings.SplitN(string(payload), ":", 2)
 
 		username := pair[0]
