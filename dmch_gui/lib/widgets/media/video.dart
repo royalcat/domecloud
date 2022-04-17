@@ -1,14 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:dmch_gui/models/entry.dart';
 import 'package:dmch_gui/provider/dmapi.dart';
-import 'package:dmch_gui/widgets/media/grid.dart';
+
+import 'package:extended_image/extended_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as path;
 
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 class VideoInfoItem extends StatefulWidget {
@@ -32,14 +30,6 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
       _previewEntries = await Provider.of<DmApiClient>(context, listen: false)
           .getPreviews(widget.entry.filePath)
           .toList();
-      for (final e in _previewEntries) {
-        precacheImage(
-          NetworkImage(
-            Provider.of<DmApiClient>(context, listen: false).getUrlFromFilepath(e.filePath),
-          ),
-          context,
-        );
-      }
 
       setState(() {});
     });
@@ -47,18 +37,17 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
 
   @override
   Widget build(BuildContext context) {
+    final dmapi = Provider.of<DmApiClient>(context, listen: false);
+
     return Column(
       children: [
         AspectRatio(
           aspectRatio: 16 / 9,
           child: _previewEntries.isNotEmpty
               ? VideoPreviews(
-                  previewUrls: _previewEntries
-                      .map(
-                        (e) => Provider.of<DmApiClient>(context, listen: false)
-                            .getUrlFromFilepath(e.filePath),
-                      )
-                      .toList(),
+                  previewUrls:
+                      _previewEntries.map((e) => dmapi.getUrlFromFilepath(e.filePath)).toList(),
+                  headers: dmapi.authHeader,
                 )
               : const SizedBox(
                   width: 100,
@@ -73,9 +62,15 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
 }
 
 class VideoPreviews extends StatefulWidget {
-  final List<String> previewUrls;
+  final List<Image> previews;
+  final Map<String, String> headers;
 
-  const VideoPreviews({Key? key, required this.previewUrls}) : super(key: key);
+  VideoPreviews({
+    Key? key,
+    required List<String> previewUrls,
+    this.headers = const <String, String>{},
+  })  : previews = previewUrls.map((e) => Image.network(e, headers: headers)).toList(),
+        super(key: key);
 
   @override
   State<VideoPreviews> createState() => _VideoPreviewsState();
@@ -91,12 +86,25 @@ class _VideoPreviewsState extends State<VideoPreviews> {
     Future.value(precacheNext);
   }
 
+  int get _nextPreview {
+    if (currentPreview == widget.previews.length - 1) {
+      return 0;
+    } else {
+      return currentPreview + 1;
+    }
+  }
+
   void precacheNext() async {
-    if (currentPreview != widget.previewUrls.length - 1) {
-      precacheImage(
-        NetworkImage(widget.previewUrls[currentPreview + 1]),
-        context,
-      );
+    if (currentPreview != widget.previews.length - 1) {
+      print("precaching: " + widget.previews[currentPreview + 1].image.toString());
+      final cached = await widget.previews[currentPreview + 1].image
+          .obtainCacheStatus(configuration: const ImageConfiguration());
+      if (cached?.untracked ?? true) {
+        await precacheImage(
+          widget.previews[currentPreview + 1].image,
+          context,
+        );
+      }
     }
   }
 
@@ -104,13 +112,9 @@ class _VideoPreviewsState extends State<VideoPreviews> {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
-        if (currentPreview == widget.previewUrls.length - 1) {
-          currentPreview = 0;
-        } else {
-          currentPreview++;
-          precacheNext();
-        }
+        currentPreview = _nextPreview;
       });
+      precacheNext();
     });
   }
 
@@ -126,11 +130,12 @@ class _VideoPreviewsState extends State<VideoPreviews> {
     return MouseRegion(
       onEnter: startRotate,
       onExit: stopRotate,
-      child: Image.network(
-        // TODO сделать кастомный кеш
-        widget.previewUrls[currentPreview],
-        width: 100,
-        height: 100,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          widget.previews[currentPreview],
+          widget.previews[_nextPreview],
+        ],
       ),
     );
   }

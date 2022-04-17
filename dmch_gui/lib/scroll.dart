@@ -1,10 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-// class CustomScrollBehaviour extends MaterialScrollBehavior {
-//   const CustomScrollBehaviour();
-// }
-
+// ignore: must_be_immutable
 class SmoothScroll extends StatelessWidget {
   ///Same ScrollController as the child widget's.
   final ScrollController controller;
@@ -34,8 +31,8 @@ class SmoothScroll extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    controller.addListener(() {
-      if (controller.position.activity is IdleScrollActivity) {
+    controller.position.isScrollingNotifier.addListener(() {
+      if (!controller.position.isScrollingNotifier.value) {
         _scroll = controller.position.extentBefore;
       }
     });

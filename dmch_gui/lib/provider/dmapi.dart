@@ -10,11 +10,18 @@ import 'package:http/http.dart' as http;
 import '../models/media.dart';
 
 class DmApiClient {
+  final Map<String, String> authHeader;
+
   final host = 'http://localhost:5050';
   final baseUrl = "/file";
 
   final path_utils.Context ctx = path_utils.url;
   final http.Client _client = http.Client();
+
+  DmApiClient({required String username, required String password})
+      : authHeader = {
+          "Authorization": 'Basic ' + base64Encode(utf8.encode('$username:$password')),
+        };
 
   Future<VideoInfo> getVideoInfo(String fpath) async {
     final resp = await _request(ctx.join(fpath, "info.json"));
@@ -40,7 +47,12 @@ class DmApiClient {
   }
 
   Future<http.Response> _request(path) async {
-    return await _client.get(Uri.parse(getUrlFromFilepath(path)));
+    return await _client.get(
+      Uri.parse(getUrlFromFilepath(path)),
+      headers: {
+        ...authHeader,
+      },
+    );
   }
 
   String getUrlFromFilepath(String fpath) => host + ctx.joinAll([baseUrl, fpath.trimLeading("/")]);

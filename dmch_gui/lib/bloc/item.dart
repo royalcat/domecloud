@@ -15,8 +15,8 @@ class VideoItemBloc extends Bloc<VideoItemEvent, VideoItemState> {
     });
 
     on<VideoItemEventHover>((event, emit) async {
-      final previews = await client.getPreviews(state.entry.filePath);
-      emit(state.copyWith(previews: previews));
+      final previews = client.getPreviews(state.entry.filePath);
+      emit(state.copyWith(previews: await previews.toList()));
     });
   }
 }

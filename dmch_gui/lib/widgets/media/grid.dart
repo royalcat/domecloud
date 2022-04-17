@@ -55,13 +55,16 @@ class _MediaGridState extends State<MediaGrid> {
   Future<List<String>> suggestions(String prefix) async {
     try {
       if (prefix.endsWith("/")) {
-        final entries = await Provider.of<DmApiClient>(context, listen: false).getEntries(prefix);
-        return entries.where((e) => !e.isDir).map<String>((e) => e.name).toList();
+        return Provider.of<DmApiClient>(context, listen: false)
+            .getEntries(prefix)
+            .where((e) => !e.isDir)
+            .map<String>((e) => e.name)
+            .toList();
       } else {
         final dir = path_utils.dirname(prefix);
-        final entries = await Provider.of<DmApiClient>(context, listen: false).getEntries(dir);
         final query = path_utils.basename(prefix);
-        return entries
+        return Provider.of<DmApiClient>(context, listen: false)
+            .getEntries(dir)
             .where((e) => !e.isDir)
             .where((element) => element.name.startsWith(query))
             .map<String>((e) => path_utils.joinAll([dir, e.name]))
@@ -111,6 +114,8 @@ class _MediaGridState extends State<MediaGrid> {
         Expanded(
           child: GridView.extent(
             maxCrossAxisExtent: 200,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
             children: <Widget>[
               ..._entries
                   .where((element) => element.isDir)

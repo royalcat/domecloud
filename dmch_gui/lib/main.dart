@@ -2,8 +2,13 @@ import 'package:dmch_gui/views/fs_view.dart';
 import 'package:dmch_gui/views/media_view.dart';
 import 'package:dmch_gui/widgets/media/grid.dart';
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 void main() {
+  // Future(() async {
+  //   await windowManager.ensureInitialized();
+  //   await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+  // });
   runApp(const MyApp());
 }
 
@@ -21,7 +26,7 @@ class MyApp extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Flutter Demo'),
         ),
-        body: MediaView(),
+        body: const MediaView(),
       ),
     );
   }
