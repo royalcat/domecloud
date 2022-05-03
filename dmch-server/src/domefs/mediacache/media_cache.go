@@ -2,27 +2,72 @@ package mediacache
 
 import (
 	"context"
-	"dmch-server/src/domefs"
+	"dmch-server/src/domefs/dindex"
 	"dmch-server/src/domefs/media"
-	"path"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"mime"
+	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type MediaCache struct {
-	dfs *domefs.DomeFS
-
 	fflock sync.Mutex
+
+	index *dindex.DomeIndex
 
 	cacheDir string
 
 	log *logrus.Entry
 }
 
-func (mw *MediaCache) GetInfoFilePath(ctx context.Context, virtpath string) (string, error) {
-	realpath := mw.dfs.RealPath(virtpath)
-	_, err := mw.genVideoInfo(ctx, virtpath, realpath)
+func NewMediaCache(db *mongo.Database, cacheDir string) *MediaCache {
+	return &MediaCache{
+		index:    dindex.NewDomeIndex(db),
+		cacheDir: cacheDir,
+		log:      logrus.WithField("service", "mediacache"),
+	}
+}
+
+// The algorithm uses at most sniffLen bytes to make its decision.
+const sniffLen = 4096
+
+func (mw *MediaCache) GetMimeType(realpath string) (media.MimeType, error) {
+	ext := filepath.Ext(realpath)
+	ctype := mime.TypeByExtension(ext)
+	if ctype != "" {
+		return media.MimeType(ctype), nil
+	}
+
+	f, err := os.Open(realpath)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return "", err
+		}
+		return "", fmt.Errorf("cant open file with error: %w", err)
+	}
+
+	var reader io.ReadSeeker = f
+	var buf [sniffLen]byte
+	n, _ := io.ReadFull(reader, buf[:])
+	ctype = http.DetectContentType(buf[:n])
+	_, err = reader.Seek(0, io.SeekStart)
+	if err != nil {
+		return "", fmt.Errorf("seeker can't seek with error: %w", err)
+	}
+
+	return media.MimeType(ctype), nil
+}
+
+func (mw *MediaCache) GetInfoFilePath(ctx context.Context, realpath, virtpath string) (string, error) {
+	_, err := mw.genVideoInfo(ctx, realpath, virtpath)
 	if err != nil {
 		mw.log.Errorf("Eror generating video info: %w", err)
 		return "", err
@@ -31,59 +76,18 @@ func (mw *MediaCache) GetInfoFilePath(ctx context.Context, virtpath string) (str
 	return mw.getInfoPath(virtpath), nil
 }
 
-func (mw *MediaCache) GetPreviewsDirPath(ctx context.Context, virtpath string) (string, error) {
-	realpath := mw.dfs.RealPath(virtpath)
-	info, err := mw.genVideoInfo(ctx, virtpath, realpath)
+func (mw *MediaCache) GetPreviewsDirPath(ctx context.Context, realpath, virtpath string) (string, error) {
+	info, err := mw.genVideoInfo(ctx, realpath, virtpath)
 	if err != nil {
 		mw.log.Errorf("Eror generating video info: %w", err)
 		return "", err
 	}
 
-	err = mw.genPreviews(ctx, virtpath, realpath, getTimestamps(info.Duration))
+	err = mw.genPreviews(ctx, realpath, virtpath, getTimestamps(info.VideoInfo.Duration))
 	if err != nil {
 		mw.log.Errorf("Eror generating video previews: %w", err)
 		return "", err
 	}
 
 	return mw.getPreviewsDirPath(virtpath), nil
-}
-
-func (mw *MediaCache) RunWarmer() {
-
-	//go mw.worker()
-}
-
-func (mw *MediaCache) warmDirectory(dir string, recursive bool) error {
-	tasks, err := mw.listDirMedia(dir, recursive)
-	if err != nil {
-		return err
-	}
-	for _, task := range tasks {
-		mw.generateCache(context.Background(), task)
-	}
-
-	return nil
-}
-
-func (mw *MediaCache) listDirMedia(dir string, recursive bool) ([]string, error) {
-	medias := []string{}
-
-	entries, err := mw.dfs.ReadDir(dir)
-	if err != nil {
-		return medias, err
-	}
-	for _, entry := range entries {
-		entrypath := path.Join(dir, entry.Name())
-		if entry.IsDir() {
-			list, err := mw.listDirMedia(entrypath, recursive)
-			if err != nil {
-				return medias, err
-			}
-			medias = append(medias, list...)
-		} else if mt, err := mw.dfs.MimeType(entrypath); err != nil && mt.MediaType() != media.MediaTypeNone {
-			medias = append(medias, entrypath)
-		}
-	}
-
-	return medias, nil
 }

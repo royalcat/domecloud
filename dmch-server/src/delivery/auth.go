@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"net/http"
@@ -42,6 +43,8 @@ func (d *DomeServer) AuthWrapper(h http.Handler) http.Handler {
 			httpWriteError(w, http.StatusUnauthorized, errors.New("Unauthorized, invalid password"))
 			return
 		}
+
+		r = r.WithContext(context.WithValue(r.Context(), "user", *user))
 
 		h.ServeHTTP(w, r)
 	})

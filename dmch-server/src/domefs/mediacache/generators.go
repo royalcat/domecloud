@@ -16,19 +16,18 @@ import (
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
-func (mw *MediaCache) generateCache(ctx context.Context, virtpath string) error {
-	realpath := mw.dfs.RealPath(virtpath)
-	info, err := mw.genVideoInfo(ctx, virtpath, realpath)
+func (mw *MediaCache) generateCache(ctx context.Context, realpath, virtpath string) error {
+	info, err := mw.genVideoInfo(ctx, realpath, virtpath)
 	if err != nil {
 		mw.log.Errorf("Eror generating video info: %w", err)
 		return err
 	}
-	mw.genPreviews(ctx, virtpath, realpath, getTimestamps(info.Duration))
+	mw.genPreviews(ctx, virtpath, realpath, getTimestamps(info.VideoInfo.Duration))
 
 	return nil
 }
 
-func (mw *MediaCache) genPreviews(ctx context.Context, virtpath, realpath string, timestamps []time.Duration) error {
+func (mw *MediaCache) genPreviews(ctx context.Context, realpath, virtpath string, timestamps []time.Duration) error {
 	previewsDir := mw.getPreviewsDirPath(virtpath)
 
 	os.MkdirAll(previewsDir, os.ModePerm)
@@ -60,7 +59,7 @@ func (mw *MediaCache) genPreviews(ctx context.Context, virtpath, realpath string
 	return nil
 }
 
-func (mw *MediaCache) genVideoInfo(ctx context.Context, virtpath, realpath string) (*media.VideoInfo, error) {
+func (mw *MediaCache) genVideoInfo(ctx context.Context, realpath, virtpath string) (*media.VisualMediaInfo, error) {
 	stat, err := os.Stat(realpath)
 	if err != nil {
 		return nil, err
@@ -87,7 +86,7 @@ func (mw *MediaCache) genVideoInfo(ctx context.Context, virtpath, realpath strin
 		return nil, fmt.Errorf("Cant parse duration with error: %s", err.Error())
 	}
 
-	info := &media.VideoInfo{
+	info := &media.VisualMediaInfo{
 		Path:    virtpath,
 		Size:    stat.Size(),
 		ModTime: stat.ModTime(),
@@ -95,8 +94,12 @@ func (mw *MediaCache) genVideoInfo(ctx context.Context, virtpath, realpath strin
 			Width:  videoStream.Width,
 			Height: videoStream.Height,
 		},
-		Duration: time.Duration(duration * float64(time.Second)),
+		VideoInfo: media.VideoInfo{
+			Duration: time.Duration(duration * float64(time.Second)),
+		},
 	}
+
+	mw.index.VideoInfo.Set(*info)
 
 	body, err := json.Marshal(info)
 	infopath := mw.getInfoPath(virtpath)

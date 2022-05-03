@@ -10,9 +10,15 @@ type Resolution struct {
 }
 
 type VideoInfo struct {
-	Path       string        `json:"path"`
-	Size       int64         `json:"size"`
-	ModTime    time.Time     `json:"modTime"`
-	Duration   time.Duration `json:"duration"`
-	Resolution Resolution    `json:"resolution"`
+	Duration time.Duration `json:"duration"`
+}
+
+type VisualMediaInfo struct {
+	Path       string     `json:"path"`
+	Size       int64      `json:"size"`
+	ModTime    time.Time  `json:"modTime"`
+	Resolution Resolution `json:"resolution"`
+	MediaType  MimeType
+
+	VideoInfo VideoInfo `json:"videoInfo"`
 }

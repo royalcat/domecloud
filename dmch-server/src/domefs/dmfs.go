@@ -1,124 +1,75 @@
 package domefs
 
 import (
-	"dmch-server/src/config"
+	"dmch-server/src/domefs/media"
+	"dmch-server/src/domefs/mediacache"
 	"io"
 	"io/fs"
 	"os"
 	"path"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type DomeFS struct {
-	rootDir  string
-	cacheDir string
+	rootDir string
+	//cacheDir string
 
 	vfuncVirtFile []map[string]vServeFile // [level][name]Serve
+
+	cache *mediacache.MediaCache
 }
 
-func NewDomeFS() *DomeFS {
+func NewDomeFS(db *mongo.Database, rootDir, cacheDir string) *DomeFS {
 	dfs := &DomeFS{
-		rootDir:  path.Clean(config.Config.RootFolder),
-		cacheDir: path.Clean(config.Config.CacheFolder),
+		rootDir: path.Clean(rootDir),
+
+		cache: mediacache.NewMediaCache(db, path.Clean(cacheDir)),
 	}
 	dfs.initVirtFileFunctions()
 	return dfs
 }
 
 func (domefs *DomeFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	// cmd := path.Base(name)
-	// if cmd == "previews" || cmd == "info" { // TODO седелать мапу с разными функциями
-	// 	fpath := path.Dir(name)
-	// 	mimetype, _ := domefs.MimeType(path.Base(fpath))
-	// 	if mimetype.MediaType() == media.MediaTypeVideo {
-	// 		switch cmd {
-	// 		case "previews":
-	// 			ctx := context.Background()
-	// 			info, _ := domefs.getVideoInfo(ctx, name)
-	// 			domefs.getPreviews(ctx, name, getTimestamps(info.Duration))
-	// 			return os.ReadDir(domefs.getPreviewsRealPath(name))
-	// 		}
-	// 	}
-	// }
-
-	fpath, err := domefs.serveVirtualEntry(name)
-	if fpath != "" && err == nil {
-		return os.ReadDir(fpath)
-	} else if err != nil {
+	realpath, err := domefs.RealPath(name)
+	if err != nil {
 		return nil, err
 	}
 
-	return os.ReadDir(domefs.RealPath(name))
+	return os.ReadDir(realpath)
 }
 
-// Open implements fs.StatFS
 func (domefs *DomeFS) Open(name string) (File, error) {
-	// cmd := path.Base(name)
-	// if cmd == "previews" || cmd == "info" {
-	// 	fpath := path.Dir(name)
-	// 	if stat, err := domefs.Stat(fpath); err == nil && stat.IsDir() {
-	// 		if stat, err = domefs.Stat(name); err == nil { // return normal file if exists
-	// 			return os.Open(domefs.RealPath(name))
-	// 		} else {
-	// 			return nil, fs.ErrInvalid
-	// 		}
-	// 	}
-
-	// 	mimetype, _ := domefs.MimeType(path.Base(fpath))
-	// 	if mimetype.MediaType() == media.MediaTypeVideo {
-	// 		switch cmd {
-	// 		case "previews":
-	// 			ctx := context.Background()
-	// 			info, _ := domefs.getVideoInfo(ctx, fpath)
-	// 			domefs.getPreviews(ctx, fpath, getTimestamps(info.Duration))
-	// 			return os.Open(domefs.getPreviewsRealPath(fpath))
-	// 		case "info":
-	// 			ctx := context.Background()
-	// 			_, err := domefs.getVideoInfo(ctx, fpath)
-	// 			if err != nil {
-	// 				logrus.Errorf("error getting video info: %s", err.Error())
-	// 			}
-	// 			infoPath := domefs.getInfoRealPath(fpath)
-	// 			return os.Open(infoPath)
-	// 		}
-	// 	} else {
-	// 		return nil, fs.ErrInvalid
-	// 	}
-	// } else if path.Base(path.Dir(name)) == "previews" {
-	// 	fpath := path.Dir(path.Dir(name))
-	// 	ctx := context.Background()
-	// 	info, _ := domefs.getVideoInfo(ctx, fpath)
-	// 	domefs.getPreviews(ctx, fpath, getTimestamps(info.Duration))
-	// 	return os.Open(path.Join(domefs.getPreviewsRealPath(fpath), path.Base(name)))
-	// }
-
-	fpath, err := domefs.serveVirtualEntry(name)
-	if fpath != "" && err == nil {
-		return os.Open(fpath)
-	} else if err != nil {
+	realpath, err := domefs.RealPath(name)
+	if err != nil {
 		return nil, err
 	}
-
-	return os.Open(domefs.RealPath(name))
+	return os.Open(realpath)
 }
 
 func (domefs *DomeFS) Stat(name string) (fs.FileInfo, error) {
-	fpath, err := domefs.serveVirtualEntry(name)
-	if fpath != "" && err == nil {
-		return os.Stat(fpath)
-	} else if err != nil {
+	realpath, err := domefs.RealPath(name)
+	if err != nil {
 		return nil, err
 	}
-
-	realPath := domefs.RealPath(name)
-	return os.Stat(realPath)
+	return os.Stat(realpath)
 }
 
-func (domefs DomeFS) RealPath(fpath string) string {
-	return path.Join(domefs.rootDir, fpath)
+func (domefs DomeFS) RealPath(fpath string) (string, error) {
+	fpath, err := domefs.serveVirtualEntryToReal(fpath)
+	if err != nil {
+		return "", err
+	}
+	return fpath, nil
 }
 
-// var _ fs.StatFS = (*DmFS)(nil)
-// var _ fs.ReadDirFS = (*DmFS)(nil)
+func (domefs *DomeFS) MimeType(name string) (media.MimeType, error) {
+	realpath, err := domefs.RealPath(name)
+	if err != nil {
+		return "", err
+	}
+	return domefs.cache.GetMimeType(realpath)
+}
 
 type File interface {
 	fs.File

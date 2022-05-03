@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:dmch_gui/models/entry.dart';
-import 'package:dmch_gui/provider/dmapi.dart';
+import 'package:dmch_gui/api/dmapi.dart';
 
-import 'package:extended_image/extended_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
@@ -46,13 +45,13 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
           child: _previewEntries.isNotEmpty
               ? VideoPreviews(
                   previewUrls:
-                      _previewEntries.map((e) => dmapi.getUrlFromFilepath(e.filePath)).toList(),
+                      _previewEntries.map((e) => dmapi.getUriFromFilepath(e.filePath)).toList(),
                   headers: dmapi.authHeader,
                 )
               : const SizedBox(
                   width: 100,
                   height: 100,
-                  child: CircularProgressIndicator(),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
         ),
         Text(widget.entry.name),
@@ -62,14 +61,14 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
 }
 
 class VideoPreviews extends StatefulWidget {
-  final List<Image> previews;
+  final List<ImageProvider> previews;
   final Map<String, String> headers;
 
   VideoPreviews({
     Key? key,
-    required List<String> previewUrls,
+    required List<Uri> previewUrls,
     this.headers = const <String, String>{},
-  })  : previews = previewUrls.map((e) => Image.network(e, headers: headers)).toList(),
+  })  : previews = previewUrls.map((e) => NetworkImage(e.toString(), headers: headers)).toList(),
         super(key: key);
 
   @override
@@ -83,7 +82,19 @@ class _VideoPreviewsState extends State<VideoPreviews> {
   @override
   void initState() {
     super.initState();
-    Future.value(precacheNext);
+    precacheNext();
+  }
+
+  @override
+  void deactivate() {
+    _timer?.cancel();
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   int get _nextPreview {
@@ -94,14 +105,13 @@ class _VideoPreviewsState extends State<VideoPreviews> {
     }
   }
 
-  void precacheNext() async {
+  Future<void> precacheNext() async {
     if (currentPreview != widget.previews.length - 1) {
-      print("precaching: " + widget.previews[currentPreview + 1].image.toString());
-      final cached = await widget.previews[currentPreview + 1].image
+      final cacheStatus = await widget.previews[currentPreview + 1]
           .obtainCacheStatus(configuration: const ImageConfiguration());
-      if (cached?.untracked ?? true) {
+      if (cacheStatus?.untracked ?? true) {
         await precacheImage(
-          widget.previews[currentPreview + 1].image,
+          widget.previews[currentPreview + 1],
           context,
         );
       }
@@ -130,13 +140,26 @@ class _VideoPreviewsState extends State<VideoPreviews> {
     return MouseRegion(
       onEnter: startRotate,
       onExit: stopRotate,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          widget.previews[currentPreview],
-          widget.previews[_nextPreview],
-        ],
+      child: Image(
+        image: widget.previews[currentPreview],
+        loadingBuilder: _loadingBuilder,
+        isAntiAlias: true,
       ),
     );
+  }
+
+  static Widget _loadingBuilder(
+      BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+    if (loadingProgress != null) {
+      if (loadingProgress.expectedTotalBytes != null) {
+        return CircularProgressIndicator(
+          value: loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!,
+        );
+      } else {
+        return const CircularProgressIndicator();
+      }
+    } else {
+      return child;
+    }
   }
 }

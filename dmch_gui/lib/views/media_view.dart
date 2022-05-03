@@ -1,7 +1,5 @@
-import 'package:dmch_gui/provider/dmapi.dart';
 import 'package:dmch_gui/widgets/media/grid.dart';
-import 'package:flutter/widgets.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/material.dart';
 
 class MediaView extends StatefulWidget {
   const MediaView({Key? key}) : super(key: key);
@@ -13,9 +11,8 @@ class MediaView extends StatefulWidget {
 class _MediaViewState extends State<MediaView> {
   @override
   Widget build(BuildContext context) {
-    return Provider<DmApiClient>(
-      create: (context) => DmApiClient(username: "admin", password: "admin"),
-      child: const MediaGrid(),
+    return const Scaffold(
+      body: MediaGrid(),
     );
   }
 }
