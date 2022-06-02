@@ -1,4 +1,4 @@
-import 'package:dmch_gui/models/entry.dart';
+import 'package:dmch_gui/api/models/entry.dart';
 import 'package:flutter/material.dart';
 
 class FolderItem extends StatelessWidget {

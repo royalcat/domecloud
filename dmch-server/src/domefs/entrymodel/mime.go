@@ -1,10 +1,13 @@
-package media
+package entrymodel
 
-import (
-	"strings"
-)
+import "strings"
 
 type MimeType string
+
+const (
+	MimeTypeJson      MimeType = "application/json"
+	MimeTypeDirectory MimeType = "inode/directory"
+)
 
 func (mimetype MimeType) MediaType() MediaType {
 	mtlower := strings.ToLower(string(mimetype))
@@ -17,14 +20,6 @@ func (mimetype MimeType) MediaType() MediaType {
 
 	return MediaTypeNone
 }
-
-type MediaType string
-
-const (
-	MediaTypeNone  MediaType = "none"
-	MediaTypeVideo           = "video"
-	MediaTypeImage           = "image"
-)
 
 func endsWithOneOf(s string, ends []string) bool {
 	for _, end := range ends {

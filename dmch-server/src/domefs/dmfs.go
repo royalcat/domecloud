@@ -1,81 +1,59 @@
 package domefs
 
 import (
-	"dmch-server/src/domefs/media"
-	"dmch-server/src/domefs/mediacache"
-	"io"
+	"dmch-server/src/domefs/dindex"
+	"dmch-server/src/domefs/domefile"
+	"dmch-server/src/domefs/entrycache"
+	"dmch-server/src/domefs/indexapi"
+	"dmch-server/src/domefs/pathctx"
 	"io/fs"
-	"os"
-	"path"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type DomeFS struct {
-	rootDir string
-	//cacheDir string
+	pathctx *pathctx.PathCtx
+
+	index *dindex.DomeIndex
 
 	vfuncVirtFile []map[string]vServeFile // [level][name]Serve
 
-	cache *mediacache.MediaCache
+	cache *entrycache.EntryIndex
+
+	Api *indexapi.DomeIndexApi
 }
 
 func NewDomeFS(db *mongo.Database, rootDir, cacheDir string) *DomeFS {
+	index := dindex.NewDomeIndex(db)
+	pathctx := pathctx.NewPathCtx(rootDir, cacheDir)
 	dfs := &DomeFS{
-		rootDir: path.Clean(rootDir),
+		pathctx: pathctx,
 
-		cache: mediacache.NewMediaCache(db, path.Clean(cacheDir)),
+		cache: entrycache.NewEntryIndex(index, pathctx),
+
+		Api: indexapi.NewIndexApi(index),
 	}
 	dfs.initVirtFileFunctions()
 	return dfs
 }
 
-func (domefs *DomeFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	realpath, err := domefs.RealPath(name)
+func (domefs *DomeFS) ReadDir(name string) ([]domefile.DirEntry, error) {
+	file, err := domefs.serveVirtualEntryToReal(name)
 	if err != nil {
 		return nil, err
 	}
 
-	return os.ReadDir(realpath)
+	return file.ReadDir(0)
 }
 
-func (domefs *DomeFS) Open(name string) (File, error) {
-	realpath, err := domefs.RealPath(name)
-	if err != nil {
-		return nil, err
-	}
-	return os.Open(realpath)
+func (domefs *DomeFS) Open(name string) (domefile.File, error) {
+	return domefs.serveVirtualEntryToReal(name)
 }
 
 func (domefs *DomeFS) Stat(name string) (fs.FileInfo, error) {
-	realpath, err := domefs.RealPath(name)
+	realpath, err := domefs.serveVirtualEntryToReal(name)
 	if err != nil {
 		return nil, err
 	}
-	return os.Stat(realpath)
-}
-
-func (domefs DomeFS) RealPath(fpath string) (string, error) {
-	fpath, err := domefs.serveVirtualEntryToReal(fpath)
-	if err != nil {
-		return "", err
-	}
-	return fpath, nil
-}
-
-func (domefs *DomeFS) MimeType(name string) (media.MimeType, error) {
-	realpath, err := domefs.RealPath(name)
-	if err != nil {
-		return "", err
-	}
-	return domefs.cache.GetMimeType(realpath)
-}
-
-type File interface {
-	fs.File
-	io.Closer
-	io.Reader
-	io.Seeker
-	Readdir(count int) ([]fs.FileInfo, error)
-	Stat() (fs.FileInfo, error)
+	return realpath.Stat()
 }

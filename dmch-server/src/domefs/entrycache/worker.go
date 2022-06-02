@@ -1,4 +1,4 @@
-package mediacache
+package entrycache
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 )
 
 type MediaCacheWorker struct {
-	mc *MediaCache
+	mc *EntryIndex
 }
 
 type EventFirer struct {

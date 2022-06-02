@@ -20,14 +20,14 @@ class User extends Equatable {
 
   factory User.fromMap(Map<String, dynamic> map) {
     return User(
-      username: map['username'] ?? '',
-      password: map['password'] ?? '',
+      username: map['username'] as String,
+      password: map['password'] as String,
     );
   }
 
   String toJson() => json.encode(toMap());
 
-  factory User.fromJson(String source) => User.fromMap(json.decode(source));
+  factory User.fromJson(String source) => User.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
   List<Object?> get props => [username, password];

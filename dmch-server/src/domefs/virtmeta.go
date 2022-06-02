@@ -2,12 +2,13 @@ package domefs
 
 import (
 	"context"
-	"dmch-server/src/domefs/media"
-	"errors"
+	"dmch-server/src/domefs/domefile"
+	"encoding/json"
+	"os"
 	"path"
 )
 
-type vServeFile func(name string) (string, error) // returns "", nil  if must be sorted as normal file
+type vServeFile func(name string) (domefile.File, error) // returns "", nil  if must be sorted as normal file
 
 func (domefs *DomeFS) initVirtFileFunctions() {
 	domefs.vfuncVirtFile = []map[string]vServeFile{
@@ -21,7 +22,15 @@ func (domefs *DomeFS) initVirtFileFunctions() {
 	}
 }
 
-func (domefs *DomeFS) serveVirtualEntryToReal(virtpath string) (string, error) {
+func (domefs *DomeFS) wrapOpenFile(virtpath string) (domefile.File, error) {
+	osfile, err := os.Open(domefs.pathctx.MotherPath(virtpath))
+	if err != nil {
+		return nil, err
+	}
+	return domefile.WrapOsFile(path.Base(virtpath), osfile), nil
+}
+
+func (domefs *DomeFS) serveVirtualEntryToReal(virtpath string) (domefile.File, error) {
 	namePart := virtpath
 	for _, funcMap := range domefs.vfuncVirtFile {
 		cmd := path.Base(namePart)
@@ -33,43 +42,40 @@ func (domefs *DomeFS) serveVirtualEntryToReal(virtpath string) (string, error) {
 		namePart = path.Dir(namePart)
 	}
 
-	return domefs.rootJoinedPath(virtpath), nil
+	return domefs.wrapOpenFile(virtpath)
 }
 
-func (domefs *DomeFS) serveInfoJson(originalName string) (string, error) {
+func (domefs *DomeFS) serveInfoJson(virtPath string) (domefile.File, error) {
 	ctx := context.Background()
-	virtFilePath := path.Dir(originalName)
-
-	mimetype, err := domefs.MimeType(path.Base(virtFilePath))
+	virtFilePath := path.Dir(virtPath)
+	entryInfo, err := domefs.cache.GetEntryInfo(ctx, virtFilePath)
 	if err != nil {
-		return "", err
-	}
-	if mimetype.MediaType() != media.MediaTypeVideo {
-		return "", errors.New("invalid file media type")
+		return nil, err
 	}
 
-	return domefs.cache.GetInfoFilePath(ctx, domefs.rootJoinedPath(virtFilePath), virtFilePath)
-}
-
-func (domefs *DomeFS) servePreviewsDir(originalName string) (string, error) {
-	ctx := context.Background()
-	virtFilePath := path.Dir(originalName)
-	return domefs.cache.GetPreviewsDirPath(ctx, domefs.rootJoinedPath(virtFilePath), virtFilePath)
-}
-
-func (domefs *DomeFS) servePreview(originalName string) (string, error) {
-	ctx := context.Background()
-	virtFilePath := path.Dir(path.Dir(originalName))
-	previewCachePath, err := domefs.cache.GetPreviewsDirPath(ctx, domefs.rootJoinedPath(virtFilePath), virtFilePath)
+	entryInfoJson, err := json.Marshal(entryInfo)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return path.Join(previewCachePath, path.Base(originalName)), nil
+	return domefile.NewMemoryFile("info.json", "application/json", entryInfoJson), nil
 }
 
-func (domefs *DomeFS) rootJoinedPath(virtpath string) string {
-	// if virtpath == "/" {
-	// 	return domefs.rootDir
-	// }
-	return path.Join(domefs.rootDir, virtpath)
+func (domefs *DomeFS) servePreviewsDir(virtPath string) (domefile.File, error) {
+	ctx := context.Background()
+	virtFilePath := path.Dir(virtPath)
+	dirFile, err := domefs.cache.GetPreviewsDir(ctx, virtFilePath)
+	if err != nil {
+		return nil, err
+	}
+	return dirFile, nil
+}
+
+func (domefs *DomeFS) servePreview(virtPath string) (domefile.File, error) {
+	ctx := context.Background()
+	virtFilePath := path.Dir(path.Dir(virtPath))
+	dirFile, err := domefs.cache.GetPreviewsDir(ctx, virtFilePath)
+	if err != nil {
+		return nil, err
+	}
+	return dirFile, nil
 }

@@ -2,6 +2,8 @@ package jsonfileserver
 
 import (
 	"dmch-server/src/domefs"
+	"dmch-server/src/domefs/domefile"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -9,8 +11,11 @@ import (
 	"mime/multipart"
 	"net/http"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type fileHandler struct {
@@ -27,7 +32,7 @@ func (fh *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		upath = "/" + upath
 		r.URL.Path = upath
 	}
-	fh.serveEntry(w, r, path.Clean(upath), true)
+	fh.serveEntry(w, r, path.Clean(upath))
 }
 
 type condResult int
@@ -38,71 +43,61 @@ const (
 	condFalse
 )
 
-func (fh *fileHandler) serveEntry(w http.ResponseWriter, r *http.Request, name string, redirect bool) {
-	stat, err := fh.root.Stat(name)
+func (fh *fileHandler) serveEntry(w http.ResponseWriter, r *http.Request, name string) {
+	file, err := fh.root.Open(name)
+	if err != nil {
+		msg, code := toHTTPError(err)
+		http.Error(w, msg, code)
+		return
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
 	if err != nil {
 		msg, code := toHTTPError(err)
 		http.Error(w, msg, code)
 		return
 	}
 
-	if redirect {
-		// redirect to canonical path: / at end of directory url
-		// r.URL.Path always begins with /
-		url := r.URL.Path
-		if stat.IsDir() {
-			if url[len(url)-1] != '/' {
-				localRedirect(w, r, path.Base(url)+"/")
-				return
-			}
-		} else {
-			if url[len(url)-1] == '/' {
-				localRedirect(w, r, "../"+path.Base(url))
-				return
-			}
-		}
-	}
-
 	if stat.IsDir() {
-		url := r.URL.Path
-		// redirect if the directory name doesn't end in a slash
-		if url == "" || url[len(url)-1] != '/' {
-			localRedirect(w, r, path.Base(url)+"/")
-			return
-		}
+		fh.serveDir(w, r, stat, file)
+	} else {
+		fh.serveFile(w, r, stat, file)
 	}
 
-	// Still a directory?
-	if stat.IsDir() {
-		if checkIfModifiedSince(r, stat.ModTime()) == condFalse {
-			writeNotModified(w)
-			return
-		}
-		setLastModifiedHeader(w, stat.ModTime())
-
-		fh.serveDir(w, r, name)
-
-		return
-	}
-
-	fh.serveFile(w, r, name)
 }
 
-func (fh *fileHandler) serveFile(w http.ResponseWriter, r *http.Request, name string) {
-	f, err := fh.root.Open(name)
-	if err != nil {
-		msg, code := toHTTPError(err)
-		http.Error(w, msg, code)
-		return
-	}
-	defer f.Close()
+func (fh *fileHandler) serveDir(w http.ResponseWriter, r *http.Request, stat fs.FileInfo, f domefile.File) {
+	entries, err := f.ReadDir(0)
 
-	stat, err := f.Stat()
 	if err != nil {
-		msg, code := toHTTPError(err)
-		http.Error(w, msg, code)
+		http.Error(w, "Error reading directory", http.StatusInternalServerError)
 		return
 	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].Name() < entries[j].Name() })
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	jsonEntries := make([]Entry, 0, len(entries))
+	for _, entry := range entries {
+		jsonEntry := Entry{
+			Name:  entry.Name(),
+			IsDir: entry.IsDir(),
+		}
+
+		jsonEntry.MimeType = entry.MimeType()
+
+		jsonEntries = append(jsonEntries, jsonEntry)
+	}
+
+	body, err := json.Marshal(jsonEntries)
+	if err != nil {
+		logrus.Errorf("Failed to marshal names list: %s", err.Error())
+	}
+	w.Write(body)
+}
+
+func (fh *fileHandler) serveFile(w http.ResponseWriter, r *http.Request, stat fs.FileInfo, f domefile.File) {
 	setLastModifiedHeader(w, stat.ModTime())
 	done, rangeReq := checkPreconditions(w, r, stat.ModTime())
 	if done {
@@ -116,13 +111,7 @@ func (fh *fileHandler) serveFile(w http.ResponseWriter, r *http.Request, name st
 	ctypes, haveType := w.Header()["Content-Type"]
 	var ctype string
 	if !haveType {
-		ctype, err := fh.root.MimeType(name)
-		if err != nil {
-			msg, code := toHTTPError(err)
-			http.Error(w, msg, code)
-			return
-		}
-		w.Header().Set("Content-Type", string(ctype))
+		w.Header().Set("Content-Type", string(f.MimeType()))
 	} else if len(ctypes) > 0 {
 		ctype = ctypes[0]
 	}

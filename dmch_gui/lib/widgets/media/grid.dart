@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dmch_gui/api/models/entry.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -9,11 +10,8 @@ import 'package:path/path.dart' as path_utils;
 import 'package:provider/provider.dart';
 
 import 'package:dmch_gui/api/dmapi.dart';
-import 'package:dmch_gui/models/entry.dart';
 import 'package:dmch_gui/widgets/media/folder.dart';
 import 'package:dmch_gui/widgets/media/video.dart';
-
-import '../../models/media.dart';
 
 const basePath = "/";
 

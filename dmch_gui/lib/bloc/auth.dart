@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:dmch_gui/api/dmapi.dart';
-import 'package:dmch_gui/models/users.dart';
+import 'package:dmch_gui/api/models/users.dart';
+
 import 'package:equatable/equatable.dart';
 
 class AuthenticationBloc extends Bloc<AuthenticationEvent, AuthenticationState> {

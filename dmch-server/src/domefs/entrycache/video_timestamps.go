@@ -1,4 +1,4 @@
-package mediacache
+package entrycache
 
 import "time"
 

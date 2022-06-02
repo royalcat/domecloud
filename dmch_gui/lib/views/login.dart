@@ -23,9 +23,20 @@ class _LoginViewState extends State<LoginView> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
-              children: const [
-                Icon(Icons.cloud, size: 150),
-                Text("DOMECLOUD"),
+              children: [
+                Row(
+                  children: const [
+                    Spacer(),
+                    Flexible(
+                      flex: 3,
+                      child: Image(
+                        image: AssetImage('assets/images/cloud-icon.png'),
+                      ),
+                    ),
+                    Spacer(),
+                  ],
+                ),
+                const Text("DOMECLOUD"),
               ],
             ),
           ),

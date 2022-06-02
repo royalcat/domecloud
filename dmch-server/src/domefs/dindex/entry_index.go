@@ -2,20 +2,22 @@ package dindex
 
 import (
 	"context"
-	"dmch-server/src/domefs/media"
+	"dmch-server/src/domefs/entrymodel"
 	"path"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type VideoInfoIndex struct {
+type EntryIndex struct {
 	coll *mongo.Collection
 }
 
-func NewVideoInfoIndex(db *mongo.Database) *VideoInfoIndex {
-	coll := db.Collection("index_video_info")
+func NewEntryIndex(db *mongo.Database) *EntryIndex {
+	coll := db.Collection("entry_index")
 	coll.Indexes().CreateMany(context.Background(),
 		[]mongo.IndexModel{
 			{
@@ -44,36 +46,40 @@ func NewVideoInfoIndex(db *mongo.Database) *VideoInfoIndex {
 			},
 		})
 
-	return &VideoInfoIndex{
+	return &EntryIndex{
 		coll: coll,
 	}
 }
 
 var _upsertOpts = options.Replace().SetUpsert(true)
 
-func (vii *VideoInfoIndex) Set(v media.VisualMediaInfo) error {
+func (vii *EntryIndex) Set(ctx context.Context, v entrymodel.EntryInfo) error {
 	_, err := vii.coll.ReplaceOne(
-		context.TODO(),
-		bson.D{{Key: "path", Value: v.Path}},
+		ctx,
+		bson.D{bson.E{Key: "path", Value: v.Path}},
 		v,
 		_upsertOpts,
 	)
 	return err
 }
 
-func (vii *VideoInfoIndex) GetSortedByDuration(targetDir string, recursive bool) ([]media.VisualMediaInfo, error) {
-	ctx := context.TODO()
+func (vii *EntryIndex) GetMediaInDir(ctx context.Context, targetDir string, recursive bool) ([]entrymodel.EntryInfo, error) {
 	targetDir = path.Clean(targetDir)
-	findOpts := options.Find().SetSort(bson.D{{Key: "duration", Value: 1}})
+	// findOpts := options.Find() //.SetSort(bson.D{{Key: "duration", Value: 1}})
+	targetDir = strings.TrimRight(targetDir, "/")
 	cur, err := vii.coll.Find(ctx,
-		bson.D{{
-			Key:   "path",
-			Value: bson.E{Key: "$regex", Value: targetDir + "/*"},
-		}}, findOpts)
+		bson.D{bson.E{
+			Key: "path",
+			Value: bson.D{bson.E{
+				Key:   "$regex",
+				Value: primitive.Regex{Pattern: targetDir + "/*"},
+			}},
+		}},
+	)
 	if err != nil {
 		return nil, err
 	}
-	result := []media.VisualMediaInfo{}
+	result := []entrymodel.EntryInfo{}
 	err = cur.All(ctx, &result)
 	if err != nil {
 		return nil, err

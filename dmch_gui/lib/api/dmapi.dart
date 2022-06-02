@@ -1,12 +1,11 @@
 import 'dart:convert';
 
+import 'package:dmch_gui/api/models/entry.dart';
+import 'package:dmch_gui/api/models/media/media.dart';
+import 'package:dmch_gui/api/models/media/video.dart';
+import 'package:dmch_gui/api/models/users.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path_utils;
-
-import 'package:dmch_gui/models/entry.dart';
-import 'package:dmch_gui/models/users.dart';
-
-import '../models/media.dart';
 
 class DmApiClient {
   final authHeader = <String, String>{};
@@ -27,6 +26,7 @@ class DmApiClient {
 
   Future<VideoInfo> getVideoInfo(String fpath) async {
     final resp = await _requestFile(ctx.join(fpath, "info.json"));
+
     return VideoInfo.fromJson(resp.body);
   }
 
@@ -40,12 +40,30 @@ class DmApiClient {
     return getEntries(ctx.joinAll([fpath, "previews"]));
   }
 
+  Stream<Entry> listMedia(String fpath) async* {
+    final resp = await _requestApi("listMedia", ctx.joinAll([fpath, "previews"]));
+
+    yield* Stream.fromIterable(
+      (json.decode(resp.body) as List<dynamic>)
+          .map((e) => Entry.fromMap(e as Map<String, dynamic>)),
+    );
+  }
+
   Stream<Entry> getEntries(String dir) async* {
     final resp = await _requestFile(dir);
 
     yield* Stream.fromIterable(
-      (json.decode(resp.body) as List<dynamic>).map((e) => Entry.fromMap(dir, e)),
+      (json.decode(resp.body) as List<dynamic>)
+          .map((e) => Entry.fromMap(e as Map<String, dynamic>)),
     );
+  }
+
+  Future<http.Response> _requestApi(String command, String path) async {
+    if (!isLoggedIn) {
+      throw NotAuthenticatedException();
+    }
+
+    return _request(_getUriApiFromFilepath(command, path));
   }
 
   Future<http.Response> _requestFile(String path) async {
@@ -77,6 +95,13 @@ class DmApiClient {
         host: host,
         port: port,
         path: ctx.joinAll([filePathBase, fpath.trimLeading("/")]),
+      );
+
+  Uri _getUriApiFromFilepath(String command, String fpath) => Uri(
+        scheme: scheme,
+        host: host,
+        port: port,
+        path: ctx.joinAll([filePathBase, command, fpath.trimLeading("/")]),
       );
 
   Future<User?> logIn({required String username, required String password}) async {

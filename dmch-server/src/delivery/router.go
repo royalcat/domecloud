@@ -45,6 +45,16 @@ func (d *DomeServer) initRouter() {
 		),
 	)
 
+	router.Handler(
+		"GET", "/api/*path",
+		d.AuthWrapper(
+			http.StripPrefix(
+				"/api/",
+				NewApiHandler(d.domefs),
+			),
+		),
+	)
+
 	router.Handler(http.MethodGet, "/login", d.AuthWrapper(http.HandlerFunc(d.Login)))
 
 	d.router = cors.AllowAll().Handler(router)

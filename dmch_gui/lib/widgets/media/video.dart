@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:dmch_gui/models/entry.dart';
 import 'package:dmch_gui/api/dmapi.dart';
+import 'package:dmch_gui/api/models/entry.dart';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -27,7 +27,7 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
 
     Future(() async {
       _previewEntries = await Provider.of<DmApiClient>(context, listen: false)
-          .getPreviews(widget.entry.filePath)
+          .getPreviews(widget.entry.path)
           .toList();
 
       setState(() {});
@@ -45,7 +45,7 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
           child: _previewEntries.isNotEmpty
               ? VideoPreviews(
                   previewUrls:
-                      _previewEntries.map((e) => dmapi.getUriFromFilepath(e.filePath)).toList(),
+                      _previewEntries.map((e) => dmapi.getUriFromFilepath(e.path)).toList(),
                   headers: dmapi.authHeader,
                 )
               : const SizedBox(
@@ -98,23 +98,15 @@ class _VideoPreviewsState extends State<VideoPreviews> {
   }
 
   int get _nextPreview {
-    if (currentPreview == widget.previews.length - 1) {
-      return 0;
-    } else {
-      return currentPreview + 1;
-    }
+    return currentPreview == widget.previews.length - 1 ? 0 : currentPreview + 1;
   }
 
-  Future<void> precacheNext() async {
+  void precacheNext() {
     if (currentPreview != widget.previews.length - 1) {
-      final cacheStatus = await widget.previews[currentPreview + 1]
-          .obtainCacheStatus(configuration: const ImageConfiguration());
-      if (cacheStatus?.untracked ?? true) {
-        await precacheImage(
-          widget.previews[currentPreview + 1],
-          context,
-        );
-      }
+      precacheImage(
+        widget.previews[currentPreview + 1],
+        context,
+      );
     }
   }
 

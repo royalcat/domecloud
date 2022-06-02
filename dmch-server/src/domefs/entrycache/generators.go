@@ -1,9 +1,9 @@
-package mediacache
+package entrycache
 
 import (
 	"context"
 	"dmch-server/src/config"
-	"dmch-server/src/domefs/media"
+	"dmch-server/src/domefs/entrymodel"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,18 +16,18 @@ import (
 	"gopkg.in/vansante/go-ffprobe.v2"
 )
 
-func (mw *MediaCache) generateCache(ctx context.Context, realpath, virtpath string) error {
-	info, err := mw.genVideoInfo(ctx, realpath, virtpath)
+func (mw *EntryIndex) generateCache(ctx context.Context, realpath, virtpath string) error {
+	entry, err := mw.genEntryInfo(ctx, realpath, virtpath)
 	if err != nil {
 		mw.log.Errorf("Eror generating video info: %w", err)
 		return err
 	}
-	mw.genPreviews(ctx, virtpath, realpath, getTimestamps(info.VideoInfo.Duration))
+	mw.genPreviews(ctx, virtpath, realpath, getTimestamps(entry.MediaInfo.VideoInfo.Duration))
 
 	return nil
 }
 
-func (mw *MediaCache) genPreviews(ctx context.Context, realpath, virtpath string, timestamps []time.Duration) error {
+func (mw *EntryIndex) genPreviews(ctx context.Context, realpath, virtpath string, timestamps []time.Duration) error {
 	previewsDir := mw.getPreviewsDirPath(virtpath)
 
 	os.MkdirAll(previewsDir, os.ModePerm)
@@ -59,7 +59,7 @@ func (mw *MediaCache) genPreviews(ctx context.Context, realpath, virtpath string
 	return nil
 }
 
-func (mw *MediaCache) genVideoInfo(ctx context.Context, realpath, virtpath string) (*media.VisualMediaInfo, error) {
+func (mw *EntryIndex) genEntryInfo(ctx context.Context, realpath, virtpath string) (*entrymodel.EntryInfo, error) {
 	stat, err := os.Stat(realpath)
 	if err != nil {
 		return nil, err
@@ -86,20 +86,22 @@ func (mw *MediaCache) genVideoInfo(ctx context.Context, realpath, virtpath strin
 		return nil, fmt.Errorf("Cant parse duration with error: %s", err.Error())
 	}
 
-	info := &media.VisualMediaInfo{
+	info := &entrymodel.EntryInfo{
 		Path:    virtpath,
 		Size:    stat.Size(),
 		ModTime: stat.ModTime(),
-		Resolution: media.Resolution{
-			Width:  videoStream.Width,
-			Height: videoStream.Height,
-		},
-		VideoInfo: media.VideoInfo{
-			Duration: time.Duration(duration * float64(time.Second)),
+		MediaInfo: &entrymodel.MediaInfo{
+			VideoInfo: &entrymodel.VideoInfo{
+				Duration: time.Duration(duration * float64(time.Second)),
+				Resolution: entrymodel.Resolution{
+					Width:  uint64(videoStream.Width),
+					Height: uint64(videoStream.Height),
+				},
+			},
 		},
 	}
 
-	mw.index.VideoInfo.Set(*info)
+	mw.index.VideoInfo.Set(ctx, *info)
 
 	body, err := json.Marshal(info)
 	infopath := mw.getInfoPath(virtpath)
