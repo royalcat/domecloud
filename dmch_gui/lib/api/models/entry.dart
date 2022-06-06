@@ -1,45 +1,54 @@
 import 'dart:convert';
 
+import 'package:collection/collection.dart';
 import 'package:dmch_gui/api/models/mime.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:path/path.dart' as path_utils;
 
 class Entry {
-  final String path;
-  final int size;
-  final DateTime modType;
+  final String name;
+  final bool isListable;
   final MimeType mimeType;
 
-  Entry({
-    required this.path,
-    required this.size,
-    required this.modType,
-    required this.mimeType,
-  });
+  final String dir;
 
-  String get name => path_utils.basename(path);
-  bool get isDir => mimeType == const MimeType.directory();
+  late final isDir = mimeType == const MimeType.directory();
+  late final path = path_utils.join(dir, name);
 
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'path': path,
-      'size': size,
-      'modType': modType.toUtc().toIso8601String(),
-      'mimeType': mimeType.toString(),
-    };
+  Entry({required this.isListable, required this.mimeType, required this.dir, required this.name});
+
+  @override
+  String toString() {
+    return 'Entry(name: $name, isListable: $isListable, mimeType: $mimeType)';
   }
 
-  factory Entry.fromMap(Map<String, dynamic> map) {
-    return Entry(
-      path: map['path'] as String,
-      size: map['size'] as int,
-      modType: DateTime.parse(map['modType'] as String),
-      mimeType: MimeType(map['mimeType'] as String),
-    );
+  factory Entry.fromMap(String dir, Map<String, dynamic> data) => Entry(
+        isListable: data['isListable'] as bool,
+        mimeType: MimeType(data['mimeType'] as String),
+        name: data['name'] as String,
+        dir: dir,
+      );
+
+  Map<String, dynamic> toMap() => {
+        'isListable': isListable,
+        'mimeType': mimeType,
+        'name': name,
+        'dir': dir,
+      };
+
+  factory Entry.fromJson(String dir, String data) {
+    return Entry.fromMap(dir, json.decode(data) as Map<String, dynamic>);
   }
 
   String toJson() => json.encode(toMap());
 
-  factory Entry.fromJson(String source) =>
-      Entry.fromMap(json.decode(source) as Map<String, dynamic>);
+  @override
+  bool operator ==(Object other) {
+    if (identical(other, this)) return true;
+    if (other is! Entry) return false;
+    final mapEquals = const DeepCollectionEquality().equals;
+    return mapEquals(other.toMap(), toMap());
+  }
+
+  @override
+  int get hashCode => isListable.hashCode ^ mimeType.hashCode ^ name.hashCode;
 }

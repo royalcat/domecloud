@@ -1,17 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
-
-import 'package:dmch_gui/api/models/entry.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
-import 'package:flutter/widgets.dart';
-import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as path_utils;
-import 'package:provider/provider.dart';
 
 import 'package:dmch_gui/api/dmapi.dart';
+import 'package:dmch_gui/api/models/entry.dart';
 import 'package:dmch_gui/widgets/media/folder.dart';
 import 'package:dmch_gui/widgets/media/video.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:path/path.dart' as path_utils;
+import 'package:provider/provider.dart';
 
 const basePath = "/";
 
@@ -39,20 +35,138 @@ class _MediaGridState extends State<MediaGrid> {
 
   Future<void> updateViewForPath(String path) async {
     try {
-      if (path != null) {
-        _pathController.text = path_utils.normalize(path);
-      }
+      _pathController.text = path_utils.normalize(path);
       _entries = await Provider.of<DmApiClient>(context, listen: false)
           .getEntries(_pathController.text)
           .toList();
       setState(() {});
     } catch (e) {
-      debugPrint("exception for path: " + _pathController.text + ": " + e.toString());
+      debugPrint("exception for path: ${_pathController.text}: $e");
       await dirUp();
     }
   }
 
-  Future<List<String>> suggestions(String prefix) async {
+  @override
+  void initState() {
+    super.initState();
+
+    Future(() async => updateViewForPath("/"));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: 80,
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => dirUp(),
+                icon: const Icon(Icons.arrow_back),
+              ),
+              Expanded(
+                child: _PathAutoComplete(
+                  pathController: _pathController,
+                  onPathChanged: updateViewForPath,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Divider(
+          height: 1,
+          thickness: 1,
+        ),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Flexible(
+                flex: 2,
+                child: FolderList(
+                  entries: _entries.where((element) => element.isDir).toList(),
+                  onOpen: (entry) => dirDown(entry.name),
+                ),
+              ),
+              const VerticalDivider(
+                width: 1,
+                thickness: 1,
+              ),
+              Flexible(
+                flex: 10,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: GridView.extent(
+                    maxCrossAxisExtent: 200,
+                    mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    children: _entries
+                        .where((element) => !element.isDir)
+                        .map((e) => VideoInfoItem(
+                              entry: e,
+                              dirPath: _pathController.text,
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PathAutoComplete extends StatelessWidget {
+  const _PathAutoComplete({Key? key, required this.pathController, required this.onPathChanged})
+      : super(key: key);
+
+  final TextEditingController pathController;
+  final void Function(String) onPathChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return RawAutocomplete<String>(
+      focusNode: FocusNode(),
+      textEditingController: pathController,
+      onSelected: onPathChanged,
+      fieldViewBuilder: (
+        BuildContext context,
+        TextEditingController textEditingController,
+        FocusNode focusNode,
+        VoidCallback onFieldSubmitted,
+      ) {
+        return TextFormField(
+          controller: textEditingController,
+          focusNode: focusNode,
+          decoration: const InputDecoration(
+            border: InputBorder.none,
+          ),
+          onFieldSubmitted: (String value) {
+            onFieldSubmitted();
+          },
+        );
+      },
+      optionsViewBuilder: (
+        BuildContext context,
+        AutocompleteOnSelected<String> onSelected,
+        Iterable<String> options,
+      ) {
+        return _AutocompleteOptions<String>(
+          displayStringForOption: RawAutocomplete.defaultStringForOption,
+          onSelected: onSelected,
+          options: options,
+          maxOptionsHeight: 200,
+        );
+      },
+      optionsBuilder: (textEditingValue) => suggestions(context, textEditingValue.text),
+    );
+  }
+
+  Future<List<String>> suggestions(BuildContext context, String prefix) async {
     try {
       if (prefix.endsWith("/")) {
         return [prefix] +
@@ -72,89 +186,10 @@ class _MediaGridState extends State<MediaGrid> {
             .toList();
       }
     } catch (e) {
-      print("exception for path: " + _pathController.text + ": " + e.toString());
+      debugPrint("exception for path: ${pathController.text}: $e");
     }
 
     return <String>[];
-  }
-
-  @override
-  void initState() {
-    super.initState();
-
-    Future(() async => await updateViewForPath("/"));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          height: 80,
-          child: Row(children: [
-            IconButton(
-              onPressed: () => dirUp(),
-              icon: const Icon(Icons.arrow_back),
-            ),
-            Expanded(
-              child: RawAutocomplete<String>(
-                  focusNode: FocusNode(),
-                  textEditingController: _pathController,
-                  onSelected: (option) {
-                    updateViewForPath(option);
-                  },
-                  fieldViewBuilder: (
-                    BuildContext context,
-                    TextEditingController textEditingController,
-                    FocusNode focusNode,
-                    VoidCallback onFieldSubmitted,
-                  ) {
-                    return TextFormField(
-                      controller: textEditingController,
-                      focusNode: focusNode,
-                      onFieldSubmitted: (String value) {
-                        onFieldSubmitted();
-                      },
-                    );
-                  },
-                  optionsViewBuilder: (
-                    BuildContext context,
-                    AutocompleteOnSelected<String> onSelected,
-                    Iterable<String> options,
-                  ) {
-                    return _AutocompleteOptions<String>(
-                      displayStringForOption: RawAutocomplete.defaultStringForOption,
-                      onSelected: onSelected,
-                      options: options,
-                      maxOptionsHeight: 200,
-                    );
-                  },
-                  optionsBuilder: (textEditingValue) => suggestions(textEditingValue.text)),
-            ),
-          ]),
-        ),
-        Expanded(
-          child: GridView.extent(
-            maxCrossAxisExtent: 200,
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            children: <Widget>[
-              ..._entries
-                  .where((element) => element.isDir)
-                  .map((e) => GestureDetector(
-                        onDoubleTap: () => dirDown(e.name),
-                        child: FolderItem(entry: e),
-                      ))
-                  .toList(),
-              ..._entries
-                  .where((element) => !element.isDir)
-                  .map((e) => VideoInfoItem(entry: e, dirPath: "/"))
-                  .toList(),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 }
 

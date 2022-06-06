@@ -26,9 +26,11 @@ class AuthenticationBloc extends Bloc<AuthenticationEvent, AuthenticationState> 
           username: event.username,
           password: event.password,
         );
-        return emit(user != null
-            ? AuthenticationState.authenticated(user)
-            : const AuthenticationState.unauthenticated());
+        return emit(
+          user != null
+              ? AuthenticationState.authenticated(user)
+              : const AuthenticationState.unauthenticated(),
+        );
       case AuthenticationStatus.unknown:
         break;
     }
@@ -66,7 +68,8 @@ enum AuthenticationStatus { unknown, authenticated, unauthenticated }
 class AuthenticationState extends Equatable {
   const AuthenticationState._({
     this.status = AuthenticationStatus.unknown,
-    this.user = const User(username: "", password: ""),
+    //this.user = const User.undefined(),
+    this.user = const User.undefined(),
   });
 
   const AuthenticationState.unknown() : this._();

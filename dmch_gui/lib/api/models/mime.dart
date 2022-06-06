@@ -10,17 +10,7 @@ class MimeType {
   @override
   String toString() => string;
 
-  Map<String, dynamic> toMap() {
-    return <String, dynamic>{
-      'string': string,
-    };
-  }
-
-  factory MimeType.fromMap(Map<String, dynamic> map) {
-    return MimeType(
-      map['string'] as String,
-    );
-  }
+  MimeType.fromString(this.string);
 
   @override
   int get hashCode => string.hashCode;

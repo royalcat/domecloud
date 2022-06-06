@@ -1,0 +1,77 @@
+Entry:
+  properties:
+    isListable:
+      name: IsListable
+      type: boolean
+    mimeType:
+      name: MimeType
+      type: string
+    name:
+      name: Name
+      type: string
+  type: object
+MediaInfo:
+  properties:
+    audioInfo:
+      name: AudioInfo
+      nullable: true
+      properties:
+        duration:
+          format: time.Duration
+          name: Duration
+          type: integer
+      type: object
+    imageInfo:
+      name: ImageInfo
+      nullable: true
+      properties:
+        resolution:
+          name: Resolution
+          properties:
+            height:
+              format: uint64
+              name: Height
+              type: integer
+            width:
+              format: uint64
+              name: Width
+              type: integer
+          type: object
+      type: object
+    mediaType:
+      name: MediaType
+      type: string
+    videoInfo:
+      name: VideoInfo
+      nullable: true
+      properties:
+        duration:
+          format: time.Duration
+          name: Duration
+          type: integer
+        resolution:
+          name: Resolution
+          properties:
+            height:
+              format: uint64
+              name: Height
+              type: integer
+            width:
+              format: uint64
+              name: Width
+              type: integer
+          type: object
+      type: object
+  type: object
+User:
+  properties:
+    isAdmin:
+      name: IsAdmin
+      type: boolean
+    password:
+      name: Password
+      type: string
+    username:
+      name: Name
+      type: string
+  type: object

@@ -11,9 +11,9 @@ import (
 )
 
 type User struct {
-	Name     string `bson:"name"`
-	Password string `bson:"password"`
-	IsAdmin  bool   `bson:"isAdmin"`
+	Name     string `json:"username" bson:"name"`
+	Password string `json:"password" bson:"password"`
+	IsAdmin  bool   `json:"isAdmin" bson:"isAdmin"`
 }
 
 type UsersStore struct {

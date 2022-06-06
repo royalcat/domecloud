@@ -1,66 +1,67 @@
 openapi: "3.0.2"
 info:
-  title: API Title
+  title: DOME API
   version: "1.0"
 servers:
-  - url: https://api.server.test/v1
+  - url: https://dome.royalcat.su/
 paths:
-  /{root}:
+  /files/{user}/{*path}:
     get:
+      parameters:
+        - $ref: "#/components/parameters/user"
+        - $ref: "#/components/parameters/path"
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: "#/components/schemas/Entry"
+                  - $ref: "#/components/schemas/Entry"
+
+  /files/{user}/{*path}/info.json:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/user"
+        - $ref: "#/components/parameters/path"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaInfo"
+  /files/{user}/{*path}/previews/:
+    get:
+      parameters:
+        - $ref: "#/components/parameters/user"
+        - $ref: "#/components/parameters/path"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entry"
 
 components:
   parameters:
-    rowParam:
-      description: Board row (vertical coordinate)
-      name: row
+    user:
+      name: user
       in: path
       required: true
       schema:
-        $ref: "#/components/schemas/coordinate"
-    columnParam:
-      description: Board column (horizontal coordinate)
-      name: column
+        type: string
+      description: User name
+    path:
+      name: path
       in: path
       required: true
       schema:
-        $ref: "#/components/schemas/coordinate"
+        type: string
+      description: Path to file
   schemas:
-    errorMessage:
-      type: string
-      maxLength: 256
-      description: A text message describing an error
-    coordinate:
-      type: integer
-      minimum: 1
-      maximum: 3
-      example: 1
-    mark:
-      type: string
-      enum: [".", "X", "O"]
-      description: Possible values for a board square. `.` means empty square.
-      example: "."
-    board:
-      type: array
-      maxItems: 3
-      minItems: 3
-      items:
-        type: array
-        maxItems: 3
-        minItems: 3
-        items:
-          $ref: "#/components/schemas/mark"
-    winner:
-      type: string
-      enum: [".", "X", "O"]
-      description: Winner of the game. `.` means nobody has won yet.
-      example: "."
-    status:
-      type: object
-      properties:
-        winner:
-          $ref: "#/components/schemas/winner"
-        board:
-          $ref: "#/components/schemas/board"
+    $ref: "models.yml"

@@ -33,9 +33,17 @@ type wrapFile struct {
 }
 
 func WrapOsFile(name string, f *os.File) File {
+
+	var mimeType entrymodel.MimeType
+	if name[len(name)-1] == '/' {
+		mimeType = entrymodel.MimeTypeDirectory
+	} else {
+		mimeType = entrymodel.MimeType(mime.TypeByExtension(path.Ext(name)))
+	}
+
 	return &wrapFile{
 		osfile:   f,
-		mimeType: entrymodel.MimeType(mime.TypeByExtension(path.Ext(name))),
+		mimeType: mimeType,
 	}
 }
 
@@ -93,5 +101,9 @@ func WrapDomeEntry(e fs.DirEntry) DirEntry {
 
 // MimeType implements DirEntry
 func (e domeEntry) MimeType() entrymodel.MimeType {
+	if e.IsDir() {
+		return entrymodel.MimeTypeDirectory
+	}
+
 	return entrymodel.MimeType(mime.TypeByExtension(path.Ext(e.Name())))
 }

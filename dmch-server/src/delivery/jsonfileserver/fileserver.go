@@ -79,13 +79,13 @@ func (fh *fileHandler) serveDir(w http.ResponseWriter, r *http.Request, stat fs.
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	jsonEntries := make([]Entry, 0, len(entries))
+
 	for _, entry := range entries {
 		jsonEntry := Entry{
-			Name:  entry.Name(),
-			IsDir: entry.IsDir(),
+			Name:       entry.Name(),
+			IsListable: entry.IsDir(),
+			MimeType:   entry.MimeType(),
 		}
-
-		jsonEntry.MimeType = entry.MimeType()
 
 		jsonEntries = append(jsonEntries, jsonEntry)
 	}

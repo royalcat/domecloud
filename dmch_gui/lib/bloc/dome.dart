@@ -51,7 +51,8 @@ class DomeBloc extends StreamBloc<DomeEvent, DomeState> {
     path_utils.joinAll([currentPath, dir]);
   }
 
-  Future<List<Entry>> _getEntries() => apiClient.getEntries(currentPath).toList();
+  Future<List<Entry>> _getEntries() =>
+      apiClient.getEntries(currentPath).toList();
 
   @override
   Stream<DomeState> mapEventToStates(DomeEvent event) async* {

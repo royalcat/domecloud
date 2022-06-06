@@ -76,7 +76,7 @@ func (mw *EntryIndex) GetPreviewsDir(ctx context.Context, virtpath string) (dome
 	realpath := mw.pathCtx.MotherPath(virtpath)
 	info, err := mw.genEntryInfo(ctx, realpath, virtpath)
 	if err != nil {
-		mw.log.Errorf("Eror generating video info: %w", err)
+		mw.log.Errorf("Error generating video info: %w", err)
 		return nil, err
 	}
 
@@ -90,5 +90,21 @@ func (mw *EntryIndex) GetPreviewsDir(ctx context.Context, virtpath string) (dome
 	if err != nil {
 		return nil, err
 	}
-	return domefile.WrapOsFile(path.Base(virtpath), file), nil
+	return domefile.WrapOsFile("previews/", file), nil
+}
+
+func (mw *EntryIndex) GetPreviewFile(ctx context.Context, virtpath string, previewFileName string) (domefile.File, error) {
+	mediapath := mw.pathCtx.MotherPath(virtpath)
+
+	err := mw.generateCache(ctx, mediapath, virtpath)
+	if err != nil {
+		return nil, err
+	}
+
+	medianame := filepath.Base(mediapath)
+	file, err := os.Open(path.Join(mw.getPreviewsDirPath(virtpath), previewFileName))
+	if err != nil {
+		return nil, err
+	}
+	return domefile.WrapOsFile(medianame, file), nil
 }

@@ -17,22 +17,15 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Row(
-        mainAxisSize: MainAxisSize.max,
         children: [
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Row(
                   children: const [
                     Spacer(),
-                    Flexible(
-                      flex: 3,
-                      child: Image(
-                        image: AssetImage('assets/images/cloud-icon.png'),
-                      ),
-                    ),
+                    Icon(Icons.cloud, size: 300),
                     Spacer(),
                   ],
                 ),
@@ -44,7 +37,6 @@ class _LoginViewState extends State<LoginView> {
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 SizedBox(
                   width: 300,
@@ -60,6 +52,7 @@ class _LoginViewState extends State<LoginView> {
                       const SizedBox(height: 10),
                       TextField(
                         controller: _passwordController,
+                        obscureText: true,
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                           labelText: 'Password',

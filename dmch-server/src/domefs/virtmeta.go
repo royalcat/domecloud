@@ -73,9 +73,9 @@ func (domefs *DomeFS) servePreviewsDir(virtPath string) (domefile.File, error) {
 func (domefs *DomeFS) servePreview(virtPath string) (domefile.File, error) {
 	ctx := context.Background()
 	virtFilePath := path.Dir(path.Dir(virtPath))
-	dirFile, err := domefs.cache.GetPreviewsDir(ctx, virtFilePath)
+	previewFile, err := domefs.cache.GetPreviewFile(ctx, virtFilePath, path.Base(virtPath))
 	if err != nil {
 		return nil, err
 	}
-	return dirFile, nil
+	return previewFile, nil
 }

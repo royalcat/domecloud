@@ -3,7 +3,7 @@ package jsonfileserver
 import "dmch-server/src/domefs/entrymodel"
 
 type Entry struct {
-	Name     string              `json:"name"`
-	IsDir    bool                `json:"isDir"`
-	MimeType entrymodel.MimeType `json:"mimeType"`
+	Name       string              `json:"name"`
+	IsListable bool                `json:"isListable"`
+	MimeType   entrymodel.MimeType `json:"mimeType"`
 }

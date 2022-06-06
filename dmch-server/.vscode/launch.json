@@ -11,6 +11,13 @@
             "mode": "auto",
             "cwd": "build",
             "program": "src/main.go"
+        },
+        {
+            "name": "Generate Documentation",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "generate_documentation.go"
         }
     ]
 }

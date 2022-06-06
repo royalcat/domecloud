@@ -19,10 +19,13 @@ import (
 func (mw *EntryIndex) generateCache(ctx context.Context, realpath, virtpath string) error {
 	entry, err := mw.genEntryInfo(ctx, realpath, virtpath)
 	if err != nil {
-		mw.log.Errorf("Eror generating video info: %w", err)
+		mw.log.Errorf("Error generating video info: %w", err)
 		return err
 	}
-	mw.genPreviews(ctx, virtpath, realpath, getTimestamps(entry.MediaInfo.VideoInfo.Duration))
+	err = mw.genPreviews(ctx, realpath, virtpath, getTimestamps(entry.MediaInfo.VideoInfo.Duration))
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

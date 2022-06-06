@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path_utils;
 
 class DmApiClient {
-  final authHeader = <String, String>{};
+  Map<String, String> authHeader = <String, String>{};
 
   User? _user;
   User? get user => _user;
@@ -40,12 +40,13 @@ class DmApiClient {
     return getEntries(ctx.joinAll([fpath, "previews"]));
   }
 
-  Stream<Entry> listMedia(String fpath) async* {
+  Stream<Entry> listMediaPreviews(String fpath) async* {
+    final previewsDir = ctx.joinAll([fpath, "previews"]);
     final resp = await _requestApi("listMedia", ctx.joinAll([fpath, "previews"]));
 
     yield* Stream.fromIterable(
       (json.decode(resp.body) as List<dynamic>)
-          .map((e) => Entry.fromMap(e as Map<String, dynamic>)),
+          .map((e) => Entry.fromMap(previewsDir, e as Map<String, dynamic>)),
     );
   }
 
@@ -54,7 +55,7 @@ class DmApiClient {
 
     yield* Stream.fromIterable(
       (json.decode(resp.body) as List<dynamic>)
-          .map((e) => Entry.fromMap(e as Map<String, dynamic>)),
+          .map((e) => Entry.fromMap(dir, e as Map<String, dynamic>)),
     );
   }
 
@@ -83,7 +84,7 @@ class DmApiClient {
     );
 
     switch (resp.statusCode) {
-      case 500:
+      case 401:
         throw NotAuthenticatedException();
       default:
         return resp;
@@ -104,15 +105,20 @@ class DmApiClient {
         path: ctx.joinAll([filePathBase, command, fpath.trimLeading("/")]),
       );
 
-  Future<User?> logIn({required String username, required String password}) async {
-    authHeader["Authorization"] = 'Basic ' + base64Encode(utf8.encode('$username:$password'));
+  Future<User?> logIn({
+    required String username,
+    required String password,
+  }) async {
+    authHeader["Authorization"] = 'Basic ${base64Encode(utf8.encode('$username:$password'))}';
     try {
-      final resp = await _request(Uri(
-        scheme: scheme,
-        host: host,
-        port: port,
-        path: "/login",
-      ));
+      final resp = await _request(
+        Uri(
+          scheme: scheme,
+          host: host,
+          port: port,
+          path: "/login",
+        ),
+      );
       _user = User.fromJson(resp.body);
       return user!;
     } on NotAuthenticatedException {

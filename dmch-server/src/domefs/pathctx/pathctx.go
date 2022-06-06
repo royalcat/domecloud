@@ -22,5 +22,5 @@ func (pathctx *PathCtx) CachePath(virtpath string) string {
 	if virtpath == "/" {
 		return pathctx.rootDir
 	}
-	return path.Join(pathctx.rootDir, virtpath)
+	return path.Join(pathctx.cachePath, virtpath)
 }

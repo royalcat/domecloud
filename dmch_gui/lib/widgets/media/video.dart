@@ -19,21 +19,6 @@ class VideoInfoItem extends StatefulWidget {
 }
 
 class _VideoInfoItemState extends State<VideoInfoItem> {
-  List<Entry> _previewEntries = [];
-
-  @override
-  void initState() {
-    super.initState();
-
-    Future(() async {
-      _previewEntries = await Provider.of<DmApiClient>(context, listen: false)
-          .getPreviews(widget.entry.path)
-          .toList();
-
-      setState(() {});
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final dmapi = Provider.of<DmApiClient>(context, listen: false);
@@ -42,17 +27,21 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
       children: [
         AspectRatio(
           aspectRatio: 16 / 9,
-          child: _previewEntries.isNotEmpty
-              ? VideoPreviews(
-                  previewUrls:
-                      _previewEntries.map((e) => dmapi.getUriFromFilepath(e.path)).toList(),
-                  headers: dmapi.authHeader,
-                )
-              : const SizedBox(
-                  width: 100,
-                  height: 100,
-                  child: Center(child: CircularProgressIndicator()),
-                ),
+          child: FutureBuilder<List<Entry>>(
+            future: dmapi.getPreviews(widget.entry.name).toList(),
+            builder: (BuildContext context, AsyncSnapshot<List<Entry>> snapshot) =>
+                snapshot.hasData && snapshot.data != null
+                    ? VideoPreviews(
+                        previewUrls:
+                            snapshot.data!.map((e) => dmapi.getUriFromFilepath(e.path)).toList(),
+                        headers: dmapi.authHeader,
+                      )
+                    : const SizedBox(
+                        width: 100,
+                        height: 100,
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+          ),
         ),
         Text(widget.entry.name),
       ],
@@ -80,12 +69,6 @@ class _VideoPreviewsState extends State<VideoPreviews> {
   Timer? _timer;
 
   @override
-  void initState() {
-    super.initState();
-    precacheNext();
-  }
-
-  @override
   void deactivate() {
     _timer?.cancel();
     super.deactivate();
@@ -99,6 +82,12 @@ class _VideoPreviewsState extends State<VideoPreviews> {
 
   int get _nextPreview {
     return currentPreview == widget.previews.length - 1 ? 0 : currentPreview + 1;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    precacheNext();
   }
 
   void precacheNext() {
@@ -141,17 +130,16 @@ class _VideoPreviewsState extends State<VideoPreviews> {
   }
 
   static Widget _loadingBuilder(
-      BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-    if (loadingProgress != null) {
-      if (loadingProgress.expectedTotalBytes != null) {
-        return CircularProgressIndicator(
-          value: loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!,
-        );
-      } else {
-        return const CircularProgressIndicator();
-      }
-    } else {
-      return child;
-    }
+    BuildContext context,
+    Widget child,
+    ImageChunkEvent? loadingProgress,
+  ) {
+    return loadingProgress != null
+        ? loadingProgress.expectedTotalBytes != null
+            ? CircularProgressIndicator(
+                value: loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!,
+              )
+            : const CircularProgressIndicator()
+        : child;
   }
 }

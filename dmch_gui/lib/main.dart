@@ -1,23 +1,5 @@
-import 'package:dmch_gui/views/fs_view.dart';
-import 'package:dmch_gui/views/login.dart';
 import 'package:dmch_gui/views/main_view.dart';
-import 'package:dmch_gui/views/media_view.dart';
-import 'package:dmch_gui/widgets/media/grid.dart';
 import 'package:flutter/material.dart';
-import 'package:window_manager/window_manager.dart';
-
-// class MyImageCache extends ImageCache {
-//   @override
-//   void clear() {
-//     print('Clearing cache!');
-//     super.clear();
-//   }
-// }
-
-// class MyWidgetsBinding extends WidgetsFlutterBinding {
-//   @override
-//   ImageCache createImageCache() => MyImageCache();
-// }
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

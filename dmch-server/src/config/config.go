@@ -34,7 +34,7 @@ func Load() {
 
 func Reload(_ interface{}) {
 	if Config.CacheFolder == "" {
-		Config.CacheFolder = path.Join(Config.RootFolder, ".cache")
+		Config.CacheFolder = path.Join(Config.RootFolder, "../.domecache")
 	}
 }
 
