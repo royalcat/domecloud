@@ -41,11 +41,7 @@ class SmoothScroll extends StatelessWidget {
       onPointerSignal: (pointerSignal) {
         int millis = scrollAnimationLength;
         if (pointerSignal is PointerScrollEvent) {
-          if (pointerSignal.scrollDelta.dy > 0) {
-            _scroll += scrollSpeed;
-          } else {
-            _scroll -= scrollSpeed;
-          }
+          pointerSignal.scrollDelta.dy > 0 ? _scroll += scrollSpeed : _scroll -= scrollSpeed;
           if (_scroll > controller.position.maxScrollExtent) {
             _scroll = controller.position.maxScrollExtent;
             millis = scrollAnimationLength ~/ 2;

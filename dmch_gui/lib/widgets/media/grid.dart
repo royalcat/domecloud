@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dmch_gui/api/dmapi.dart';
 import 'package:dmch_gui/api/models/entry.dart';
+import 'package:dmch_gui/scroll.dart';
 import 'package:dmch_gui/widgets/media/folder.dart';
 import 'package:dmch_gui/widgets/media/video.dart';
 import 'package:flutter/material.dart';
@@ -22,27 +23,28 @@ class _MediaGridState extends State<MediaGrid> {
   final _pathController = TextEditingController(text: basePath);
 
   List<Entry> _entries = [];
+  bool loading = true;
 
-  Future<void> dirUp() async {
-    if (_pathController.text != "/") {
-      await updateViewForPath(path_utils.dirname(_pathController.text));
-    }
-  }
+  void dirUp() => updateViewForPath(path_utils.dirname(_pathController.text));
 
-  Future<void> dirDown(String dir) async {
-    await updateViewForPath(path_utils.joinAll([_pathController.text, dir]));
-  }
+  void dirDown(String dir) => updateViewForPath(path_utils.joinAll([_pathController.text, dir]));
 
   Future<void> updateViewForPath(String path) async {
     try {
-      _pathController.text = path_utils.normalize(path);
-      _entries = await Provider.of<DmApiClient>(context, listen: false)
-          .getEntries(_pathController.text)
-          .toList();
-      setState(() {});
+      setState(() {
+        loading = true;
+      });
+
+      final entries =
+          await Provider.of<DmApiClient>(context, listen: false).getEntries(path).toList();
+
+      setState(() {
+        _pathController.text = path;
+        _entries = entries;
+        loading = false;
+      });
     } catch (e) {
       debugPrint("exception for path: ${_pathController.text}: $e");
-      await dirUp();
     }
   }
 
@@ -50,7 +52,7 @@ class _MediaGridState extends State<MediaGrid> {
   void initState() {
     super.initState();
 
-    Future(() async => updateViewForPath("/"));
+    updateViewForPath("/");
   }
 
   @override
@@ -80,40 +82,44 @@ class _MediaGridState extends State<MediaGrid> {
           thickness: 1,
         ),
         Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Flexible(
-                flex: 2,
-                child: FolderList(
-                  entries: _entries.where((element) => element.isDir).toList(),
-                  onOpen: (entry) => dirDown(entry.name),
+          child: loading
+              ? const Center(child: CircularProgressIndicator())
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Flexible(
+                      flex: 2,
+                      child: FolderList(
+                        entries: _entries.where((element) => element.isDir).toList(),
+                        onOpen: (entry) => dirDown(entry.name),
+                      ),
+                    ),
+                    const VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                    ),
+                    Flexible(
+                      flex: 10,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: GridView.extent(
+                          maxCrossAxisExtent: 200,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          children: _entries
+                              .where((element) => !element.isDir)
+                              .map(
+                                (e) => VideoInfoItem(
+                                  entry: e,
+                                  dirPath: _pathController.text,
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const VerticalDivider(
-                width: 1,
-                thickness: 1,
-              ),
-              Flexible(
-                flex: 10,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: GridView.extent(
-                    maxCrossAxisExtent: 200,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    children: _entries
-                        .where((element) => !element.isDir)
-                        .map((e) => VideoInfoItem(
-                              entry: e,
-                              dirPath: _pathController.text,
-                            ))
-                        .toList(),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ],
     );

@@ -1,15 +1,18 @@
 import 'package:dmch_gui/api/models/entry.dart';
+import 'package:dmch_gui/scroll.dart';
 import 'package:flutter/material.dart';
 
 class FolderList extends StatelessWidget {
   final List<Entry> entries;
   final void Function(Entry entry) onOpen;
+  final ScrollController _scrollController = ScrollController();
 
-  const FolderList({Key? key, required this.entries, required this.onOpen}) : super(key: key);
+  FolderList({Key? key, required this.entries, required this.onOpen}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return ListView(
+      controller: _scrollController,
       children: entries
           .map<Widget>(
             (entry) => ListTile(

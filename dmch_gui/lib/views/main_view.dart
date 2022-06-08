@@ -29,6 +29,10 @@ class MainView extends StatelessWidget {
                 return const LoginView();
               case AuthenticationStatus.authenticated:
                 return const MediaView();
+              case AuthenticationStatus.connectionError:
+                return const Center(
+                  child: Text("Connection error"),
+                );
               default:
                 return const Center(child: CircularProgressIndicator());
             }

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:dmch_gui/api/dmapi.dart';
 import 'package:dmch_gui/api/models/entry.dart';
+import 'package:dmch_gui/views/video/play_video.dart';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -25,22 +26,32 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
 
     return Column(
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: FutureBuilder<List<Entry>>(
-            future: dmapi.getPreviews(widget.entry.name).toList(),
-            builder: (BuildContext context, AsyncSnapshot<List<Entry>> snapshot) =>
-                snapshot.hasData && snapshot.data != null
-                    ? VideoPreviews(
-                        previewUrls:
-                            snapshot.data!.map((e) => dmapi.getUriFromFilepath(e.path)).toList(),
-                        headers: dmapi.authHeader,
-                      )
-                    : const SizedBox(
-                        width: 100,
-                        height: 100,
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
+        GestureDetector(
+          onTap: () => playVideo(
+            context,
+            Uri.parse(
+              "https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4",
+            ),
+            dmapi.authHeader,
+          ),
+          //playVideo(context, dmapi.getUriFromFilepath(widget.entry.name), dmapi.authHeader),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: FutureBuilder<List<Entry>>(
+              future: dmapi.getPreviews(widget.entry.name).toList(),
+              builder: (BuildContext context, AsyncSnapshot<List<Entry>> snapshot) =>
+                  snapshot.hasData && snapshot.data != null
+                      ? VideoPreviews(
+                          previewUrls:
+                              snapshot.data!.map((e) => dmapi.getUriFromFilepath(e.path)).toList(),
+                          headers: dmapi.authHeader,
+                        )
+                      : const SizedBox(
+                          width: 100,
+                          height: 100,
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+            ),
           ),
         ),
         Text(widget.entry.name),

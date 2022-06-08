@@ -63,7 +63,7 @@ class AuthenticationLogInEvent extends AuthenticationEvent {
 
 class AuthenticationLogoutEvent extends AuthenticationEvent {}
 
-enum AuthenticationStatus { unknown, authenticated, unauthenticated }
+enum AuthenticationStatus { unknown, authenticated, unauthenticated, connectionError }
 
 class AuthenticationState extends Equatable {
   const AuthenticationState._({
@@ -73,6 +73,9 @@ class AuthenticationState extends Equatable {
   });
 
   const AuthenticationState.unknown() : this._();
+
+  const AuthenticationState.connectionError()
+      : this._(status: AuthenticationStatus.connectionError);
 
   const AuthenticationState.authenticated(User user)
       : this._(status: AuthenticationStatus.authenticated, user: user);

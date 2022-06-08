@@ -1,3 +1,4 @@
+import 'package:dart_vlc/dart_vlc.dart';
 import 'package:dmch_gui/views/main_view.dart';
 import 'package:flutter/material.dart';
 
@@ -10,6 +11,7 @@ void main() {
   //   await windowManager.ensureInitialized();
   //   await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
   // });
+  DartVLC.initialize(useFlutterNativeView: true);
   runApp(const MyApp());
 }
 
