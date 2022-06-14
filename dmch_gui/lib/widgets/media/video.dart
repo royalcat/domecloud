@@ -3,17 +3,16 @@ import 'dart:async';
 import 'package:dmch_gui/api/dmapi.dart';
 import 'package:dmch_gui/api/models/entry.dart';
 import 'package:dmch_gui/views/video/play_video.dart';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
 
 class VideoInfoItem extends StatefulWidget {
-  final String dirPath;
   final Entry entry;
+  final void Function(Entry)? onOpenDetails;
 
-  const VideoInfoItem({Key? key, required this.dirPath, required this.entry}) : super(key: key);
+  const VideoInfoItem({Key? key, this.onOpenDetails, required this.entry}) : super(key: key);
 
   @override
   State<VideoInfoItem> createState() => _VideoInfoItemState();
@@ -27,23 +26,19 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
     return Column(
       children: [
         GestureDetector(
-          onTap: () => playVideo(
-            context,
-            Uri.parse(
-              "https://www.learningcontainer.com/wp-content/uploads/2020/05/sample-mp4-file.mp4",
-            ),
-            dmapi.authHeader,
-          ),
-          //playVideo(context, dmapi.getUriFromFilepath(widget.entry.name), dmapi.authHeader),
+          onDoubleTap: () async {
+            final uri = await dmapi.getPlayUrl(widget.entry.path);
+            playVideo(context, uri);
+          },
+          onTap: () => widget.onOpenDetails?.call(widget.entry),
           child: AspectRatio(
             aspectRatio: 16 / 9,
             child: FutureBuilder<List<Entry>>(
-              future: dmapi.getPreviews(widget.entry.name).toList(),
+              future: dmapi.getPreviews(widget.entry.path).toList(),
               builder: (BuildContext context, AsyncSnapshot<List<Entry>> snapshot) =>
                   snapshot.hasData && snapshot.data != null
-                      ? VideoPreviews(
-                          previewUrls:
-                              snapshot.data!.map((e) => dmapi.getUriFromFilepath(e.path)).toList(),
+                      ? VideoPreview(
+                          previewUrls: snapshot.data!.map((e) => dmapi.getFileUri(e.path)).toList(),
                           headers: dmapi.authHeader,
                         )
                       : const SizedBox(
@@ -60,11 +55,11 @@ class _VideoInfoItemState extends State<VideoInfoItem> {
   }
 }
 
-class VideoPreviews extends StatefulWidget {
+class VideoPreview extends StatefulWidget {
   final List<ImageProvider> previews;
   final Map<String, String> headers;
 
-  VideoPreviews({
+  VideoPreview({
     Key? key,
     required List<Uri> previewUrls,
     this.headers = const <String, String>{},
@@ -72,10 +67,10 @@ class VideoPreviews extends StatefulWidget {
         super(key: key);
 
   @override
-  State<VideoPreviews> createState() => _VideoPreviewsState();
+  State<VideoPreview> createState() => _VideoPreviewState();
 }
 
-class _VideoPreviewsState extends State<VideoPreviews> {
+class _VideoPreviewState extends State<VideoPreview> {
   int currentPreview = 0;
   Timer? _timer;
 

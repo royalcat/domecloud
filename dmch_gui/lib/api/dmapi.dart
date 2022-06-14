@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dmch_gui/api/models/entry.dart';
 import 'package:dmch_gui/api/models/media/media.dart';
 import 'package:dmch_gui/api/models/media/video.dart';
+import 'package:dmch_gui/api/models/meta.dart';
 import 'package:dmch_gui/api/models/users.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path_utils;
@@ -17,20 +18,23 @@ class DmApiClient {
   final scheme = "http";
   final host = 'localhost';
   final port = 5050;
-  final filePathBase = "/file";
+  final filePathBase = "file";
+  final playerPathBase = "player";
+
+  String get userDir => "/user/${user?.name}";
 
   final path_utils.Context ctx = path_utils.url;
   final http.Client _client = http.Client();
 
   DmApiClient();
 
-  Future<VideoInfo> getVideoInfo(String fpath) async {
+  Future<EntryMeta> getVideoInfo(String fpath) async {
     final resp = await _requestFile(ctx.join(fpath, "info.json"));
 
-    return VideoInfo.fromJson(resp.body);
+    return EntryMeta.fromMap(json.decode(resp.body) as Map<String, dynamic>);
   }
 
-  Stream<VideoInfo> getVideoInfos(String dir, List<Entry> entries) async* {
+  Stream<EntryMeta> getVideoInfos(String dir, List<Entry> entries) async* {
     for (final entry in entries) {
       yield await getVideoInfo(ctx.joinAll([dir, entry.name]));
     }
@@ -59,6 +63,13 @@ class DmApiClient {
     );
   }
 
+  Future<Uri> getPlayUrl(String fpath) async {
+    final uri = _getPlayerUri("regtoken", fpath);
+    final resp = await _request(uri);
+
+    return _getPlayerUri("play", fpath, token: resp.body);
+  }
+
   Future<http.Response> _requestApi(String command, String path) async {
     if (!isLoggedIn) {
       throw NotAuthenticatedException();
@@ -72,7 +83,7 @@ class DmApiClient {
       throw NotAuthenticatedException();
     }
 
-    return _request(getUriFromFilepath(path));
+    return _request(getFileUri(path));
   }
 
   Future<http.Response> _request(Uri uri) async {
@@ -91,7 +102,7 @@ class DmApiClient {
     }
   }
 
-  Uri getUriFromFilepath(String fpath) => Uri(
+  Uri getFileUri(String fpath) => Uri(
         scheme: scheme,
         host: host,
         port: port,
@@ -103,6 +114,18 @@ class DmApiClient {
         host: host,
         port: port,
         path: ctx.joinAll([filePathBase, command, fpath.trimLeading("/")]),
+      );
+
+  Uri _getPlayerUri(String command, String fpath, {String? token}) => Uri(
+        scheme: scheme,
+        host: host,
+        port: port,
+        path: ctx.joinAll([playerPathBase, command, fpath.trimLeading("/")]),
+        queryParameters: token != null
+            ? {
+                "token": token,
+              }
+            : null,
       );
 
   Future<User?> logIn({

@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dmch_gui/api/dmapi.dart';
 import 'package:dmch_gui/api/models/entry.dart';
-import 'package:dmch_gui/scroll.dart';
+import 'package:dmch_gui/api/models/media/video.dart';
+import 'package:dmch_gui/api/models/meta.dart';
+import 'package:dmch_gui/widgets/app_scaffold/app_scaffold.dart';
 import 'package:dmch_gui/widgets/media/folder.dart';
 import 'package:dmch_gui/widgets/media/video.dart';
 import 'package:flutter/material.dart';
@@ -10,20 +13,31 @@ import 'package:flutter/scheduler.dart';
 import 'package:path/path.dart' as path_utils;
 import 'package:provider/provider.dart';
 
-const basePath = "/";
-
 class MediaGrid extends StatefulWidget {
-  const MediaGrid({Key? key}) : super(key: key);
+  final String basePath;
+
+  const MediaGrid({Key? key, required this.basePath}) : super(key: key);
 
   @override
   State<MediaGrid> createState() => _MediaGridState();
 }
 
+const _avalibleSorts = ["Name", "Size", "Date"];
+
 class _MediaGridState extends State<MediaGrid> {
-  final _pathController = TextEditingController(text: basePath);
+  final _pathController = TextEditingController();
 
   List<Entry> _entries = [];
   bool loading = true;
+  bool canDirUp = false;
+  String sort = _avalibleSorts[0];
+  Entry? selectedEntry;
+
+  @override
+  void initState() {
+    super.initState();
+    updateViewForPath(widget.basePath);
+  }
 
   void dirUp() => updateViewForPath(path_utils.dirname(_pathController.text));
 
@@ -42,6 +56,7 @@ class _MediaGridState extends State<MediaGrid> {
         _pathController.text = path;
         _entries = entries;
         loading = false;
+        canDirUp = path != widget.basePath;
       });
     } catch (e) {
       debugPrint("exception for path: ${_pathController.text}: $e");
@@ -49,87 +64,163 @@ class _MediaGridState extends State<MediaGrid> {
   }
 
   @override
-  void initState() {
-    super.initState();
+  Widget build(BuildContext context) {
+    final dmapi = Provider.of<DmApiClient>(context);
+    final ThemeData theme = Theme.of(context);
 
-    updateViewForPath("/");
+    return AppScaffold(
+      endDrawer: Drawer(
+        //width: 300,
+        child: Column(
+          children: [
+            UserAccountsDrawerHeader(
+              currentAccountPicture: const CircleAvatar(
+                child: Icon(Icons.person),
+              ),
+              accountName: Text(dmapi.user?.name ?? ""),
+              accountEmail: Text("@${dmapi.user?.name ?? ""}"),
+            ),
+            if (selectedEntry != null) renderDetails(context, selectedEntry!),
+          ],
+        ),
+      ),
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => dirUp(),
+          icon: const Icon(Icons.arrow_back),
+        ),
+        title: _PathAutoComplete(
+          pathController: _pathController,
+          onPathChanged: updateViewForPath,
+          basePath: widget.basePath,
+        ),
+      ),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: const [
+          FloatingActionButton(
+            onPressed: null,
+            child: Icon(Icons.cloud_upload),
+          ),
+          SizedBox(width: 10),
+          FloatingActionButton(
+            onPressed: null,
+            child: Icon(Icons.create_new_folder),
+          ),
+        ],
+      ),
+      body: !loading
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Flexible(
+                  flex: 2,
+                  child: FolderList(
+                    entries: _entries.where((element) => element.isDir).toList(),
+                    onOpen: (entry) => dirDown(entry.name),
+                  ),
+                ),
+                const VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                ),
+                Flexible(
+                  flex: 10,
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          height: 40,
+                          child: Row(
+                            children: [
+                              const Text("Sort by: "),
+                              DropdownButton<String>(
+                                onChanged: (value) => setState(() {
+                                  sort = value ?? _avalibleSorts[0];
+                                }),
+                                value: sort,
+                                items: _avalibleSorts
+                                    .map<DropdownMenuItem<String>>(
+                                      (e) => DropdownMenuItem(
+                                        value: e,
+                                        child: Text(e),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Expanded(
+                          child: GridView.extent(
+                            maxCrossAxisExtent: 200,
+                            mainAxisSpacing: 10,
+                            crossAxisSpacing: 10,
+                            children: _entries
+                                .where((element) => !element.isDir)
+                                .map(
+                                  (e) => VideoInfoItem(
+                                    entry: e,
+                                    onOpenDetails: (e) => setState(() {
+                                      selectedEntry = e;
+                                    }),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : const Center(child: CircularProgressIndicator()),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          height: 80,
-          child: Row(
-            children: [
-              IconButton(
-                onPressed: () => dirUp(),
-                icon: const Icon(Icons.arrow_back),
-              ),
-              Expanded(
-                child: _PathAutoComplete(
-                  pathController: _pathController,
-                  onPathChanged: updateViewForPath,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Divider(
-          height: 1,
-          thickness: 1,
-        ),
-        Expanded(
-          child: loading
-              ? const Center(child: CircularProgressIndicator())
-              : Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Flexible(
-                      flex: 2,
-                      child: FolderList(
-                        entries: _entries.where((element) => element.isDir).toList(),
-                        onOpen: (entry) => dirDown(entry.name),
-                      ),
+  Widget renderDetails(BuildContext context, Entry entry) {
+    final dmapi = Provider.of<DmApiClient>(context);
+
+    return FutureBuilder<EntryMeta>(
+      future: dmapi.getVideoInfo(entry.path),
+      builder: (context, snapshot) {
+        return Column(
+          children: [
+            ListTile(
+              leading: const Text("Name:"),
+              title: Text(entry.name),
+            ),
+            ...snapshot.hasData
+                ? [
+                    ListTile(
+                      leading: const Text("Duration:"),
+                      title: Text(snapshot.data!.mediaInfo?.videoInfo?.duration?.toString() ?? ""),
                     ),
-                    const VerticalDivider(
-                      width: 1,
-                      thickness: 1,
+                    ListTile(
+                      leading: const Text("Resolution:"),
+                      title:
+                          Text(snapshot.data!.mediaInfo?.videoInfo?.resolution?.toString() ?? ""),
                     ),
-                    Flexible(
-                      flex: 10,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: GridView.extent(
-                          maxCrossAxisExtent: 200,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          children: _entries
-                              .where((element) => !element.isDir)
-                              .map(
-                                (e) => VideoInfoItem(
-                                  entry: e,
-                                  dirPath: _pathController.text,
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-        ),
-      ],
+                  ]
+                : [const CircularProgressIndicator()],
+          ],
+        );
+      },
     );
   }
 }
 
 class _PathAutoComplete extends StatelessWidget {
-  const _PathAutoComplete({Key? key, required this.pathController, required this.onPathChanged})
-      : super(key: key);
+  const _PathAutoComplete({
+    Key? key,
+    required this.pathController,
+    required this.onPathChanged,
+    required this.basePath,
+  }) : super(key: key);
 
+  final String basePath;
   final TextEditingController pathController;
   final void Function(String) onPathChanged;
 
@@ -173,10 +264,15 @@ class _PathAutoComplete extends StatelessWidget {
   }
 
   Future<List<String>> suggestions(BuildContext context, String prefix) async {
+    final dmapi = Provider.of<DmApiClient>(context, listen: false);
+    if (prefix.isEmpty || prefix == basePath) {
+      return [];
+    }
+
     try {
       if (prefix.endsWith("/")) {
         return [prefix] +
-            await Provider.of<DmApiClient>(context, listen: false)
+            await dmapi
                 .getEntries(prefix)
                 .where((e) => e.isDir)
                 .map<String>((e) => path_utils.joinAll([prefix, e.name]))
@@ -184,7 +280,7 @@ class _PathAutoComplete extends StatelessWidget {
       } else {
         final dir = path_utils.dirname(prefix);
         final query = path_utils.basename(prefix);
-        return await Provider.of<DmApiClient>(context, listen: false)
+        return await dmapi
             .getEntries(dir)
             .where((e) => e.isDir)
             .where((element) => element.name.startsWith(query))

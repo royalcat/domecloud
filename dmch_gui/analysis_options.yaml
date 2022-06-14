@@ -12,6 +12,8 @@ analyzer:
     strict-casts: true
     strict-inference: true
     strict-raw-types: true
+  rules:
+    avoid_positional_boolean_parameters: true
 
 dart_code_metrics:
   anti-patterns:

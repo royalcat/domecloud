@@ -35,10 +35,11 @@ type wrapFile struct {
 func WrapOsFile(name string, f *os.File) File {
 
 	var mimeType entrymodel.MimeType
-	if name[len(name)-1] == '/' {
+	ext := path.Ext(name)
+	if name[len(name)-1] == '/' || ext == "" {
 		mimeType = entrymodel.MimeTypeDirectory
 	} else {
-		mimeType = entrymodel.MimeType(mime.TypeByExtension(path.Ext(name)))
+		mimeType = entrymodel.MimeType(mime.TypeByExtension(ext))
 	}
 
 	return &wrapFile{

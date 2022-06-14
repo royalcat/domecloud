@@ -10,8 +10,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+var reservedUsernames = []string{"shared", "all", "admin"}
+
 type User struct {
-	Name     string `json:"username" bson:"name"`
+	Username string `json:"username" bson:"name"`
 	Password string `json:"password" bson:"password"`
 	IsAdmin  bool   `json:"isAdmin" bson:"isAdmin"`
 }
@@ -26,14 +28,14 @@ func NewUsersStore(db lungo.IDatabase) *UsersStore {
 		collection: db.Collection("users"),
 	}
 
-	store.SetUser(context.Background(), User{Name: "admin", Password: "admin", IsAdmin: true})
+	store.SetUser(context.Background(), User{Username: "admin", Password: "admin", IsAdmin: true})
 
 	return store
 }
 
 func (s *UsersStore) SetUser(ctx context.Context, user User) error {
 	_, err := s.collection.ReplaceOne(ctx,
-		bson.M{"_id": user.Name}, user,
+		bson.M{"_id": user.Username}, user,
 		options.Replace().SetUpsert(true),
 	)
 	if err != nil {

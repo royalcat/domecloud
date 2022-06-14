@@ -3,6 +3,7 @@ package delivery
 import (
 	"dmch-server/src/config"
 	"dmch-server/src/delivery/jsonfileserver"
+	"dmch-server/src/delivery/player"
 	"dmch-server/src/domefs"
 	"dmch-server/src/store"
 	"encoding/json"
@@ -35,29 +36,43 @@ func NewDomeServer(db *mongo.Database, usersStore *store.UsersStore) *DomeServer
 func (d *DomeServer) initRouter() {
 	router := httprouter.New()
 
-	router.Handler(
-		"GET", "/file/*path",
+	fileserver := jsonfileserver.NewFileServer(d.domefs)
+	api := NewApiHandler(d.domefs)
+	player := player.NewPlayer(fileserver)
+
+	stripHandler(router,
+		"GET", "/file",
 		d.AuthWrapper(
-			http.StripPrefix(
-				"/file/",
-				jsonfileserver.FileServer(d.domefs),
-			),
+			fileserver,
 		),
 	)
 
-	router.Handler(
-		"GET", "/api/*path",
+	stripHandler(router,
+		"GET", "/api",
 		d.AuthWrapper(
-			http.StripPrefix(
-				"/api/",
-				NewApiHandler(d.domefs),
-			),
+			api,
 		),
+	)
+
+	stripHandler(router,
+		"GET", "/player/regtoken",
+		d.AuthWrapper(
+			http.HandlerFunc(player.GetToken),
+		),
+	)
+
+	stripHandler(router,
+		"GET", "/player/play",
+		http.HandlerFunc(player.Play),
 	)
 
 	router.Handler(http.MethodGet, "/login", d.AuthWrapper(http.HandlerFunc(d.Login)))
 
 	d.router = cors.AllowAll().Handler(router)
+}
+
+func stripHandler(router *httprouter.Router, method, path string, h http.Handler) {
+	router.Handler(method, path+"/*path", http.StripPrefix(path, h))
 }
 
 func (d *DomeServer) Login(w http.ResponseWriter, r *http.Request) {

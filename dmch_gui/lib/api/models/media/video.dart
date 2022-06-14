@@ -42,8 +42,7 @@ class VideoInfo extends MediaInfo {
       VideoInfo.fromMap(json.decode(source) as Map<String, dynamic>);
 
   @override
-  String toString() =>
-      'VideoInfo(duration: $duration, resolution: $resolution)';
+  String toString() => 'VideoInfo(duration: $duration, resolution: $resolution)';
 
   @override
   int get hashCode => duration.hashCode ^ resolution.hashCode;

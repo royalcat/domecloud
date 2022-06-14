@@ -1,4 +1,3 @@
-import 'package:dart_vlc/dart_vlc.dart';
 import 'package:dmch_gui/views/main_view.dart';
 import 'package:flutter/material.dart';
 
@@ -11,7 +10,7 @@ void main() {
   //   await windowManager.ensureInitialized();
   //   await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
   // });
-  DartVLC.initialize(useFlutterNativeView: true);
+  //DartVLC.initialize(useFlutterNativeView: true);
   runApp(const MyApp());
 }
 
@@ -21,6 +20,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'DomeCoud',
       theme: ThemeData.light().copyWith(primaryColor: Colors.greenAccent),
       darkTheme: ThemeData.dark().copyWith(primaryColor: Colors.greenAccent),

@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	"dmch-server/src/store"
 	"encoding/base64"
 	"errors"
 	"net/http"
@@ -44,7 +45,12 @@ func (d *DomeServer) AuthWrapper(h http.Handler) http.Handler {
 			return
 		}
 
-		r = r.WithContext(context.WithValue(r.Context(), "user", *user))
+		if !isPathAccessable(r.URL.Path, *user) {
+			httpWriteError(w, http.StatusForbidden, errors.New("Forbidden, access denied"))
+			return
+		}
+
+		r = r.WithContext(context.WithValue(ctx, "user", *user))
 
 		h.ServeHTTP(w, r)
 	})
@@ -53,4 +59,32 @@ func (d *DomeServer) AuthWrapper(h http.Handler) http.Handler {
 func httpWriteError(w http.ResponseWriter, status int, err error) {
 	w.WriteHeader(status)
 	w.Write([]byte(err.Error()))
+}
+
+func isPathAccessable(path string, user store.User) bool {
+	parts := strings.Split(strings.TrimLeft(path, "/"), "/")
+	if parts == nil || len(parts) == 0 {
+		return false
+	}
+
+	switch parts[0] {
+	case "login":
+		return true
+	case "user":
+		if len(parts) >= 2 {
+			return user.Username == parts[1]
+		}
+	case "share":
+		if len(parts) >= 2 {
+			switch parts[1] {
+			case "all":
+				return true
+			case "user":
+				return user.Username == parts[2]
+			}
+		}
+	case "external":
+		return false // FIXME
+	}
+	return false
 }

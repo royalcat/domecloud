@@ -30,6 +30,13 @@ class _LoginViewState extends State<LoginView> {
                   ],
                 ),
                 const Text("DOMECLOUD"),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: 300,
+                  child: TextField(
+                    controller: TextEditingController(text: "http://localhost:8086"),
+                  ),
+                ),
               ],
             ),
           ),

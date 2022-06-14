@@ -18,15 +18,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type fileHandler struct {
+type FileServer struct {
 	root *domefs.DomeFS
 }
 
-func FileServer(root *domefs.DomeFS) http.Handler {
-	return &fileHandler{root}
+func NewFileServer(root *domefs.DomeFS) *FileServer {
+	return &FileServer{root}
 }
 
-func (fh *fileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (fh *FileServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	upath := r.URL.Path
 	if !strings.HasPrefix(upath, "/") {
 		upath = "/" + upath
@@ -43,7 +43,7 @@ const (
 	condFalse
 )
 
-func (fh *fileHandler) serveEntry(w http.ResponseWriter, r *http.Request, name string) {
+func (fh *FileServer) serveEntry(w http.ResponseWriter, r *http.Request, name string) {
 	file, err := fh.root.Open(name)
 	if err != nil {
 		msg, code := toHTTPError(err)
@@ -67,7 +67,7 @@ func (fh *fileHandler) serveEntry(w http.ResponseWriter, r *http.Request, name s
 
 }
 
-func (fh *fileHandler) serveDir(w http.ResponseWriter, r *http.Request, stat fs.FileInfo, f domefile.File) {
+func (fh *FileServer) serveDir(w http.ResponseWriter, r *http.Request, stat fs.FileInfo, f domefile.File) {
 	entries, err := f.ReadDir(0)
 
 	if err != nil {
@@ -97,7 +97,7 @@ func (fh *fileHandler) serveDir(w http.ResponseWriter, r *http.Request, stat fs.
 	w.Write(body)
 }
 
-func (fh *fileHandler) serveFile(w http.ResponseWriter, r *http.Request, stat fs.FileInfo, f domefile.File) {
+func (fh *FileServer) serveFile(w http.ResponseWriter, r *http.Request, stat fs.FileInfo, f domefile.File) {
 	setLastModifiedHeader(w, stat.ModTime())
 	done, rangeReq := checkPreconditions(w, r, stat.ModTime())
 	if done {

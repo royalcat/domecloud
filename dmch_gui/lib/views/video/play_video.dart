@@ -1,96 +1,37 @@
-import 'dart:convert';
-import 'dart:io';
-import 'dart:ui' as ui;
-
-import 'package:dart_vlc/dart_vlc.dart';
-import 'package:dmch_gui/views/video/my_video.dart';
+import 'package:dmch_gui/api/dmapi.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart';
+import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-void playVideo(BuildContext context, Uri uri, Map<String, String> headers) async {
-  Navigator.push(
-    context,
-    MaterialPageRoute<void>(
-      builder: (context) => VLCPlayer(Media.network(uri, extras: headers)),
-    ),
-  );
+Future<void> playVideo(BuildContext context, Uri uri) async {
+  await launchUrl(uri);
+  // return Navigator.push<void>(
+  //   context,
+  //   MaterialPageRoute<void>(
+  //     builder: (context) => MyVideoPlayer(
+  //       uri: uri,
+  //     ),
+  //   ),
+  // );
 }
 
-class VLCPlayer extends StatefulWidget {
-  final Media media;
+class MyVideoPlayer extends StatefulWidget {
+  final Uri uri;
+  final VideoPlayerController _controller;
 
-  const VLCPlayer(this.media);
+  MyVideoPlayer({Key? key, required this.uri})
+      : _controller = VideoPlayerController.network(uri.toString()),
+        super(key: key);
 
   @override
-  VLCPlayerState createState() => VLCPlayerState();
+  State<MyVideoPlayer> createState() => _MyVideoPlayerState();
 }
 
-class VLCPlayerState extends State<VLCPlayer> {
-  Player player = Player(
-    id: 0,
-    videoDimensions: const VideoDimensions(640, 360),
-    registerTexture: !Platform.isWindows,
-  );
-  // MediaType mediaType = MediaType.file;
-  // CurrentState current = CurrentState();
-  // PositionState position = PositionState();
-  // PlaybackState playback = PlaybackState();
-  // GeneralState general = GeneralState();
-  // VideoDimensions videoDimensions = const VideoDimensions(0, 0);
-  // List<Device> devices = <Device>[];
-  // TextEditingController controller = TextEditingController();
-  // TextEditingController metasController = TextEditingController();
-  // double bufferingProgress = 0.0;
-  // Media? metasMedia;
-
-  @override
-  void initState() {
-    super.initState();
-    // if (mounted) {
-    //   player.currentStream.listen((current) {
-    //     setState(() => this.current = current);
-    //   });
-    //   player.positionStream.listen((position) {
-    //     setState(() => this.position = position);
-    //   });
-    //   player.playbackStream.listen((playback) {
-    //     setState(() => this.playback = playback);
-    //   });
-    //   player.generalStream.listen((general) {
-    //     setState(() => this.general = general);
-    //   });
-    //   player.videoDimensionsStream.listen((videoDimensions) {
-    //     setState(() => this.videoDimensions = videoDimensions);
-    //   });
-    //   player.bufferingProgressStream.listen(
-    //     (bufferingProgress) {
-    //       setState(() => this.bufferingProgress = bufferingProgress);
-    //     },
-    //   );
-    //   player.errorStream.listen((event) {
-    //     debugPrint('libvlc error: $event');
-    //   });
-    //   devices = Devices.all;
-    //   final Equalizer equalizer = Equalizer.createMode(EqualizerMode.live);
-    //   equalizer.setPreAmp(10.0);
-    //   equalizer.setBandAmp(31.25, 10.0);
-    //   player.setEqualizer(equalizer);
-    // }
-
-    player.open(widget.media);
-  }
-
-  @override
-  void dispose() {
-    player.dispose();
-    super.dispose();
-  }
-
+class _MyVideoPlayerState extends State<MyVideoPlayer> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: MyVideo(
-        player: player,
-      ),
-    );
+    return VideoPlayer(widget._controller);
   }
 }

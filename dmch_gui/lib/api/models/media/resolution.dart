@@ -24,4 +24,7 @@ class Resolution {
 
   factory Resolution.fromJson(String source) =>
       Resolution.fromMap(json.decode(source) as Map<String, dynamic>);
+
+  @override
+  String toString() => '${width}x$height';
 }
