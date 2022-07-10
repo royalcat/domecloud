@@ -1,9 +1,9 @@
 package jsonfileserver
 
-import "dmch-server/src/domefs/entrymodel"
+import "dmch-server/src/domefs/dmime"
 
 type Entry struct {
-	Name       string              `json:"name"`
-	IsListable bool                `json:"isListable"`
-	MimeType   entrymodel.MimeType `json:"mimeType"`
+	Name       string         `json:"name"`
+	IsListable bool           `json:"isListable"`
+	MimeType   dmime.MimeType `json:"mimeType"`
 }

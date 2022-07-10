@@ -19,7 +19,7 @@ import (
 func (mw *EntryIndex) generateCache(ctx context.Context, realpath, virtpath string) error {
 	entry, err := mw.genEntryInfo(ctx, realpath, virtpath)
 	if err != nil {
-		mw.log.Errorf("Error generating video info: %w", err)
+		mw.log.Errorf("Error generating video info: %s", err.Error())
 		return err
 	}
 	err = mw.genPreviews(ctx, realpath, virtpath, getTimestamps(entry.MediaInfo.VideoInfo.Duration))
@@ -42,7 +42,7 @@ func (mw *EntryIndex) genPreviews(ctx context.Context, realpath, virtpath string
 		filename := fmt.Sprintf("%d.webp", i)
 		output := path.Join(previewsDir, filename)
 		if _, err := os.Stat(output); os.IsNotExist(err) {
-			mw.fflock.Lock()
+			mw.ffPool.Acquire(nil, 1)
 			body, err := exec.CommandContext(ctx,
 				"ffmpeg",
 				"-y",
@@ -52,7 +52,7 @@ func (mw *EntryIndex) genPreviews(ctx context.Context, realpath, virtpath string
 				"-vframes", "1",
 				output,
 			).CombinedOutput()
-			mw.fflock.Unlock()
+			mw.ffPool.Release(1)
 			if err != nil {
 				mw.log.Errorf("error creating preview: %s with output: %s", err.Error(), string(body))
 				return err
@@ -68,9 +68,7 @@ func (mw *EntryIndex) genEntryInfo(ctx context.Context, realpath, virtpath strin
 		return nil, err
 	}
 
-	mw.fflock.Lock()
 	probe, err := ffprobe.ProbeURL(ctx, realpath)
-	mw.fflock.Unlock()
 	if err != nil {
 		return nil, err
 	}

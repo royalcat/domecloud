@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/256dpi/lungo"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -13,10 +14,10 @@ import (
 )
 
 type EntryIndex struct {
-	coll *mongo.Collection
+	coll lungo.ICollection
 }
 
-func NewEntryIndex(db *mongo.Database) *EntryIndex {
+func NewEntryIndex(db lungo.IDatabase) *EntryIndex {
 	coll := db.Collection("entry_index")
 	coll.Indexes().CreateMany(context.Background(),
 		[]mongo.IndexModel{

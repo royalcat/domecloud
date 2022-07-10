@@ -3,6 +3,7 @@ package entrycache
 import (
 	"context"
 	"dmch-server/src/domefs/dindex"
+	"dmch-server/src/domefs/dmime"
 	"dmch-server/src/domefs/domefile"
 	"dmch-server/src/domefs/entrymodel"
 	"dmch-server/src/domefs/pathctx"
@@ -15,13 +16,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"sync"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/semaphore"
 )
 
 type EntryIndex struct {
-	fflock sync.Mutex
+	ffPool *semaphore.Weighted
 
 	index *dindex.DomeIndex
 
@@ -32,6 +33,7 @@ type EntryIndex struct {
 
 func NewEntryIndex(index *dindex.DomeIndex, pathCtx *pathctx.PathCtx) *EntryIndex {
 	return &EntryIndex{
+		ffPool:  semaphore.NewWeighted(10),
 		index:   index,
 		pathCtx: pathCtx,
 		log:     logrus.WithField("service", "entry_index"),
@@ -41,11 +43,11 @@ func NewEntryIndex(index *dindex.DomeIndex, pathCtx *pathctx.PathCtx) *EntryInde
 // The algorithm uses at most sniffLen bytes to make its decision.
 const sniffLen = 4096
 
-func (mw *EntryIndex) GetMimeType(realpath string) (entrymodel.MimeType, error) {
+func (mw *EntryIndex) GetMimeType(realpath string) (dmime.MimeType, error) {
 	ext := filepath.Ext(realpath)
 	ctype := mime.TypeByExtension(ext)
 	if ctype != "" {
-		return entrymodel.MimeType(ctype), nil
+		return dmime.MimeType(ctype), nil
 	}
 
 	f, err := os.Open(realpath)
@@ -65,7 +67,7 @@ func (mw *EntryIndex) GetMimeType(realpath string) (entrymodel.MimeType, error) 
 		return "", fmt.Errorf("seeker can't seek with error: %w", err)
 	}
 
-	return entrymodel.MimeType(ctype), nil
+	return dmime.MimeType(ctype), nil
 }
 
 func (mw *EntryIndex) GetEntryInfo(ctx context.Context, virtpath string) (*entrymodel.EntryInfo, error) {
@@ -76,13 +78,13 @@ func (mw *EntryIndex) GetPreviewsDir(ctx context.Context, virtpath string) (dome
 	realpath := mw.pathCtx.MotherPath(virtpath)
 	info, err := mw.genEntryInfo(ctx, realpath, virtpath)
 	if err != nil {
-		mw.log.Errorf("Error generating video info: %w", err)
+		mw.log.Errorf("Error generating video info: %s", err.Error())
 		return nil, err
 	}
 
 	err = mw.genPreviews(ctx, realpath, virtpath, getTimestamps(info.MediaInfo.VideoInfo.Duration))
 	if err != nil {
-		mw.log.Errorf("Eror generating video previews: %w", err)
+		mw.log.Errorf("Error generating video previews: %s", err.Error())
 		return nil, err
 	}
 

@@ -1,12 +1,12 @@
 package dindex
 
-import "go.mongodb.org/mongo-driver/mongo"
+import "github.com/256dpi/lungo"
 
 type DomeIndex struct {
 	VideoInfo *EntryIndex
 }
 
-func NewDomeIndex(db *mongo.Database) *DomeIndex {
+func NewDomeIndex(db lungo.IDatabase) *DomeIndex {
 	return &DomeIndex{
 		VideoInfo: NewEntryIndex(db),
 	}

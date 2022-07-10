@@ -44,25 +44,28 @@ const (
 )
 
 func (fh *FileServer) serveEntry(w http.ResponseWriter, r *http.Request, name string) {
-	file, err := fh.root.Open(name)
-	if err != nil {
-		msg, code := toHTTPError(err)
-		http.Error(w, msg, code)
-		return
-	}
-	defer file.Close()
+	switch r.Method {
+	case "GET":
+		file, err := fh.root.Open(name)
+		if err != nil {
+			msg, code := toHTTPError(err)
+			http.Error(w, msg, code)
+			return
+		}
+		defer file.Close()
 
-	stat, err := file.Stat()
-	if err != nil {
-		msg, code := toHTTPError(err)
-		http.Error(w, msg, code)
-		return
-	}
+		stat, err := file.Stat()
+		if err != nil {
+			msg, code := toHTTPError(err)
+			http.Error(w, msg, code)
+			return
+		}
 
-	if stat.IsDir() {
-		fh.serveDir(w, r, stat, file)
-	} else {
-		fh.serveFile(w, r, stat, file)
+		if stat.IsDir() {
+			fh.serveDir(w, r, stat, file)
+		} else {
+			fh.serveFile(w, r, stat, file)
+		}
 	}
 
 }
@@ -81,8 +84,13 @@ func (fh *FileServer) serveDir(w http.ResponseWriter, r *http.Request, stat fs.F
 	jsonEntries := make([]Entry, 0, len(entries))
 
 	for _, entry := range entries {
+		name := entry.Name()
+		if len(name) == 0 || name[0] == '.' {
+			continue
+		}
+
 		jsonEntry := Entry{
-			Name:       entry.Name(),
+			Name:       name,
 			IsListable: entry.IsDir(),
 			MimeType:   entry.MimeType(),
 		}

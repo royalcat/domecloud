@@ -4,7 +4,6 @@ import (
 	"context"
 	"dmch-server/src/domefs/domefile"
 	"encoding/json"
-	"os"
 	"path"
 )
 
@@ -22,14 +21,6 @@ func (domefs *DomeFS) initVirtFileFunctions() {
 	}
 }
 
-func (domefs *DomeFS) wrapOpenFile(virtpath string) (domefile.File, error) {
-	osfile, err := os.Open(domefs.pathctx.MotherPath(virtpath))
-	if err != nil {
-		return nil, err
-	}
-	return domefile.WrapOsFile(path.Base(virtpath), osfile), nil
-}
-
 func (domefs *DomeFS) serveVirtualEntryToReal(virtpath string) (domefile.File, error) {
 	namePart := virtpath
 	for _, funcMap := range domefs.vfuncVirtFile {
@@ -42,7 +33,8 @@ func (domefs *DomeFS) serveVirtualEntryToReal(virtpath string) (domefile.File, e
 		namePart = path.Dir(namePart)
 	}
 
-	return domefs.wrapOpenFile(virtpath)
+	realpath := domefs.pathctx.MotherPath(virtpath)
+	return domefile.OpenDomeFile(realpath)
 }
 
 func (domefs *DomeFS) serveInfoJson(virtPath string) (domefile.File, error) {

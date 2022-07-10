@@ -2,7 +2,7 @@ package domefile
 
 import (
 	"bytes"
-	"dmch-server/src/domefs/entrymodel"
+	"dmch-server/src/domefs/dmime"
 	"io/fs"
 	"time"
 )
@@ -10,17 +10,37 @@ import (
 type memoryFile struct {
 	name     string
 	fileInfo fs.FileInfo
-	mimeType entrymodel.MimeType
+	mimeType dmime.MimeType
 	*bytes.Reader
 }
 
-func NewMemoryFile(name string, mimeType entrymodel.MimeType, data []byte) File {
+// Path implements File
+func (f *memoryFile) Path() string {
+	panic("unimplemented")
+}
+
+func NewMemoryFile(name string, mimeType dmime.MimeType, data []byte) File {
 	return &memoryFile{
 		name:     name,
 		mimeType: mimeType,
 		fileInfo: newMemoryFileInfo(name, int64(len(data))),
 		Reader:   bytes.NewReader(data),
 	}
+}
+
+// Info implements File
+func (f *memoryFile) Info() (fs.FileInfo, error) {
+	return f.fileInfo, nil
+}
+
+// IsDir implements File
+func (f *memoryFile) IsDir() bool {
+	return f.IsDir()
+}
+
+// Type implements File
+func (f *memoryFile) Type() fs.FileMode {
+	return f.Type()
 }
 
 // Name implements File
@@ -34,7 +54,7 @@ func (*memoryFile) Close() error {
 }
 
 // MimeType implements File
-func (f *memoryFile) MimeType() entrymodel.MimeType {
+func (f *memoryFile) MimeType() dmime.MimeType {
 	return f.mimeType
 }
 
@@ -106,6 +126,26 @@ type memoryDirFile struct {
 	files    []DirEntry
 }
 
+// Path implements File
+func (*memoryDirFile) Path() string {
+	panic("unimplemented")
+}
+
+// Info implements File
+func (f *memoryDirFile) Info() (fs.FileInfo, error) {
+	return f.fileinfo, nil
+}
+
+// IsDir implements File
+func (f *memoryDirFile) IsDir() bool {
+	return f.IsDir()
+}
+
+// Type implements File
+func (f *memoryDirFile) Type() fs.FileMode {
+	return f.Type()
+}
+
 // Name implements File
 func (f *memoryDirFile) Name() string {
 	return f.name
@@ -132,8 +172,8 @@ func (*memoryDirFile) Seek(offset int64, whence int) (int64, error) {
 }
 
 // MimeType implements File
-func (*memoryDirFile) MimeType() entrymodel.MimeType {
-	return entrymodel.MimeTypeDirectory
+func (*memoryDirFile) MimeType() dmime.MimeType {
+	return dmime.MimeTypeDirectory
 }
 
 // ReadDir implements File
@@ -174,36 +214,36 @@ func (f *memoryDirFile) ReadDir(n int) ([]DirEntry, error) {
 // 	return entrymodel.MimeType(mime.TypeByExtension(path.Ext(e.name)))
 // }
 
-type dirEntryFile struct {
-	name string
-	File
-}
+// type dirEntryFile struct {
+// 	name string
+// 	File
+// }
 
-// Name implements DirEntry
-func (e *dirEntryFile) Name() string {
-	return e.name
-}
+// // Name implements DirEntry
+// func (e *dirEntryFile) Name() string {
+// 	return e.name
+// }
 
-// Type implements DirEntry
-func (e *dirEntryFile) Type() fs.FileMode {
-	return fs.ModePerm
-}
+// // Type implements DirEntry
+// func (e *dirEntryFile) Type() fs.FileMode {
+// 	return fs.ModePerm
+// }
 
-// IsDir implements DirEntry
-func (*dirEntryFile) IsDir() bool {
-	return false
-}
+// // IsDir implements DirEntry
+// func (*dirEntryFile) IsDir() bool {
+// 	return false
+// }
 
-func (e *dirEntryFile) Info() (fs.FileInfo, error) {
-	return e.Info()
-}
+// func (e *dirEntryFile) Info() (fs.FileInfo, error) {
+// 	return e.Info()
+// }
 
-func WrapFileToDirEntry(name string, file File) DirEntry {
-	return &dirEntryFile{
-		name: name,
-		File: file,
-	}
-}
+// func WrapFileToDirEntry(name string, file File) DirEntry {
+// 	return &dirEntryFile{
+// 		name: name,
+// 		File: file,
+// 	}
+// }
 
 type memoryDirInfo struct {
 	name       string

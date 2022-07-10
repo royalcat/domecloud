@@ -8,7 +8,7 @@ import (
 	"dmch-server/src/domefs/pathctx"
 	"io/fs"
 
-	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/256dpi/lungo"
 )
 
 type DomeFS struct {
@@ -23,7 +23,7 @@ type DomeFS struct {
 	Api *indexapi.DomeIndexApi
 }
 
-func NewDomeFS(db *mongo.Database, rootDir, cacheDir string) *DomeFS {
+func NewDomeFS(db lungo.IDatabase, rootDir, cacheDir string) *DomeFS {
 	index := dindex.NewDomeIndex(db)
 	pathctx := pathctx.NewPathCtx(rootDir, cacheDir)
 	dfs := &DomeFS{

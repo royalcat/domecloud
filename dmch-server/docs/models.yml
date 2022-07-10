@@ -72,6 +72,6 @@ User:
       name: Password
       type: string
     username:
-      name: Name
+      name: Username
       type: string
   type: object

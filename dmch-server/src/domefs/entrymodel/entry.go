@@ -1,6 +1,7 @@
 package entrymodel
 
 import (
+	"dmch-server/src/domefs/dmime"
 	"time"
 )
 
@@ -8,22 +9,13 @@ type EntryInfo struct {
 	Path     string    `json:"path"`
 	Size     int64     `json:"size"`
 	ModTime  time.Time `json:"modTime"`
-	MimeType MimeType
+	MimeType dmime.MediaType
 
 	MediaInfo *MediaInfo `json:"mediaInfo"`
 }
 
-type MediaType string
-
-const (
-	MediaTypeNone  MediaType = "none"
-	MediaTypeVideo           = "video"
-	MediaTypeImage           = "image"
-	MediaTypeAudio           = "audio"
-)
-
 type MediaInfo struct {
-	MediaType MediaType `json:"mediaType"`
+	MediaType dmime.MediaType `json:"mediaType"`
 
 	ImageInfo *ImageInfo `json:"imageInfo,omitempty"`
 	VideoInfo *VideoInfo `json:"videoInfo,omitempty"`

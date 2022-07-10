@@ -9,10 +9,10 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/256dpi/lungo"
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type DomeServer struct {
@@ -23,7 +23,7 @@ type DomeServer struct {
 	domefs *domefs.DomeFS
 }
 
-func NewDomeServer(db *mongo.Database, usersStore *store.UsersStore) *DomeServer {
+func NewDomeServer(db lungo.IDatabase, usersStore *store.UsersStore) *DomeServer {
 	server := &DomeServer{
 		router:     httprouter.New(),
 		usersStore: usersStore,
@@ -42,6 +42,13 @@ func (d *DomeServer) initRouter() {
 
 	stripHandler(router,
 		"GET", "/file",
+		d.AuthWrapper(
+			fileserver,
+		),
+	)
+
+	stripHandler(router,
+		"POST", "/file",
 		d.AuthWrapper(
 			fileserver,
 		),

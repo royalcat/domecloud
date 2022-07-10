@@ -1,7 +1,7 @@
 package domefile
 
 import (
-	"dmch-server/src/domefs/entrymodel"
+	"dmch-server/src/domefs/dmime"
 	"io"
 	"io/fs"
 	"mime"
@@ -11,10 +11,12 @@ import (
 
 type File interface {
 	Name() string
+	Path() string
+	fs.DirEntry
 	fs.File
 	io.Seeker
 	ReadDir(n int) ([]DirEntry, error)
-	Stat() (fs.FileInfo, error)
+	//Stat() (fs.FileInfo, error)
 	MimeType
 }
 
@@ -24,22 +26,42 @@ type DirEntry interface {
 }
 
 type MimeType interface {
-	MimeType() entrymodel.MimeType
+	MimeType() dmime.MimeType
 }
 
 type wrapFile struct {
 	osfile   *os.File
-	mimeType entrymodel.MimeType
+	mimeType dmime.MimeType
+}
+
+func OpenDomeFile(fpath string) (File, error) {
+	fi, err := os.Lstat(fpath)
+	if err != nil {
+		return nil, err
+	}
+	realpath := fpath
+	if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+		realpath, err = os.Readlink(fpath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	osfile, err := os.Open(realpath)
+	if err != nil {
+		return nil, err
+	}
+	return WrapOsFile(path.Base(fpath), osfile), nil
 }
 
 func WrapOsFile(name string, f *os.File) File {
 
-	var mimeType entrymodel.MimeType
+	var mimeType dmime.MimeType
 	ext := path.Ext(name)
 	if name[len(name)-1] == '/' || ext == "" {
-		mimeType = entrymodel.MimeTypeDirectory
+		mimeType = dmime.MimeTypeDirectory
 	} else {
-		mimeType = entrymodel.MimeType(mime.TypeByExtension(ext))
+		mimeType = dmime.MimeType(mime.TypeByExtension(ext))
 	}
 
 	return &wrapFile{
@@ -48,9 +70,29 @@ func WrapOsFile(name string, f *os.File) File {
 	}
 }
 
+// Path implements File
+func (f *wrapFile) Path() string {
+	return f.osfile.Name()
+}
+
+// Info implements File
+func (f *wrapFile) Info() (fs.FileInfo, error) {
+	return f.osfile.Stat()
+}
+
+// IsDir implements File
+func (f *wrapFile) IsDir() bool {
+	return f.mimeType == dmime.MimeTypeDirectory
+}
+
+// Type implements File
+func (f *wrapFile) Type() fs.FileMode {
+	return f.Type()
+}
+
 // Name implements File
 func (f *wrapFile) Name() string {
-	return f.osfile.Name()
+	return path.Base(f.osfile.Name())
 }
 
 // Close implements File
@@ -74,7 +116,7 @@ func (f *wrapFile) Seek(offset int64, whence int) (int64, error) {
 }
 
 // MimeType implements File
-func (f *wrapFile) MimeType() entrymodel.MimeType {
+func (f *wrapFile) MimeType() dmime.MimeType {
 	return f.mimeType
 }
 
@@ -86,7 +128,7 @@ func (f *wrapFile) ReadDir(n int) ([]DirEntry, error) {
 
 	domeEntries := make([]DirEntry, 0, len(entries))
 	for _, entry := range entries {
-		domeEntries = append(domeEntries, WrapDomeEntry(entry))
+		domeEntries = append(domeEntries, WrapDomeEntry(f.osfile.Name(), entry))
 	}
 
 	return domeEntries, nil
@@ -96,15 +138,21 @@ type domeEntry struct {
 	fs.DirEntry
 }
 
-func WrapDomeEntry(e fs.DirEntry) DirEntry {
+func WrapDomeEntry(dir string, e fs.DirEntry) DirEntry {
+	if e.Type() == fs.ModeSymlink {
+		entry, _ := OpenDomeFile(path.Join(dir, e.Name()))
+		return entry
+	}
+
 	return domeEntry{e}
 }
 
 // MimeType implements DirEntry
-func (e domeEntry) MimeType() entrymodel.MimeType {
+func (e domeEntry) MimeType() dmime.MimeType {
+
 	if e.IsDir() {
-		return entrymodel.MimeTypeDirectory
+		return dmime.MimeTypeDirectory
 	}
 
-	return entrymodel.MimeType(mime.TypeByExtension(path.Ext(e.Name())))
+	return dmime.MimeType(mime.TypeByExtension(path.Ext(e.Name())))
 }

@@ -1,0 +1,27 @@
+[
+  {
+    "mediaType": "video/mp4",
+    "videoInfo": {
+      "duration": 60000000000,
+      "resolution": {
+        "height": 1080,
+        "width": 1920
+      }
+    }
+  },
+  {
+    "mediaType": "image/png",
+    "imageInfo": {
+      "resolution": {
+        "height": 1080,
+        "width": 1920
+      }
+    }
+  },
+  {
+    "mediaType": "audio/flac",
+    "audioInfo": {
+      "duration": 60000000000
+    }
+  }
+]

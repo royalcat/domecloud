@@ -15,6 +15,7 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/rs/cors v1.8.2
 	gopkg.in/vansante/go-ffprobe.v2 v2.0.3
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -33,5 +34,4 @@ require (
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
